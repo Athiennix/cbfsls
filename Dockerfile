@@ -2,7 +2,7 @@
 FROM python:3.9-slim
 
 # Set the working directory in the container
-WORKDIR /Scheduler
+WORKDIR /app
 
 # Copy requirements.txt to the container
 COPY requirements.txt .
