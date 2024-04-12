@@ -177,12 +177,12 @@
           <div class="alert alert-info col-6 mt-3" role="alert">
             {% for prof in professorData if prof[0] == current_professor %}
             <h5 class="text-center mt-3">
-              Schedule for <b>{{prof[1]}}</b> is available.
+              Load for <b>{{prof[1]}}</b> is available.
             </h5>
             <p class="text-center">See content below for details.</p>
             {% else %}
             <h5 class="text-center my-3">
-              Please select a professor to be scheduled.
+              Please select a professor to be loaded.
             </h5>
             {% endfor %}
           </div>
@@ -192,17 +192,11 @@
         <div class="container" id="contentContainer">
           <div class="row gx-3">
             <div class="col-4">
+              <h3 class="text-center pb-3">Load Professor</h3>
               <div class="bg-primary-subtle p-4 rounded-4">
-                <h3 class="text-center pb-3">Professor Details</h3>
                 <div class="form-floating">
-                  <select
-                    id="profDetails"
-                    class="form-select"
-                    name="professorDetails"
-                    style="height: 70px"
-                    onchange="hideDiv()"
-                  >
-                    <option default>- Select Professor -</option>
+                  <select id="profDetails" class="form-select" name="professorDetails" style="height: 70px" onchange="checkProfessorSelection()">
+                    <option value="" {% if current_professor == "- Select Professor -" %} selected {% endif %} hidden>- Select Professor -</option>
                     {% for professors in professorData %}
                     <option value="{{ professors[0] }}" {% if professors[0] == current_professor %} selected="selected" {% endif %}>
                       {{ professors[1] }}
@@ -212,38 +206,33 @@
                   <label for="profDetails">Professor Name</label>
                 </div>
 
-                <p
-                  id="choiceLabel"
-                  class="pt-5 text-center"
-                  onloadstart="hideCheckSchedule()"
-                >
-                  Choose from the options:
-                </p>
+                <p id="choiceLabel" class="pt-5 text-center">Choose from the options:</p>
                 <div class="d-flex column-gap-3 justify-content-center">
-                  <button
-                    id="hiddenCheckSchedule"
-                    type="submit"
-                    name="btn"
-                    value="checkProfessorSchedule"
-                    class="btn btn-primary"
-                    onloadstart="hideCheckSchedule()"
-                    formnovalidate
-                  >
+                  <button id="hiddenCheckSchedule" type="submit" name="btn" value="checkProfessorSchedule" class="btn btn-primary" onloadstart="hideCheckSchedule()" formnovalidate disabled>
                     Schedule Courses
                   </button>
 
-                  <button
-                    id="hiddenHonorariumVacancy"
-                    type="submit"
-                    name="btn"
-                    value="setHonorariumVacantTime"
-                    class="btn btn-secondary"
-                    onloadstart="hideHonorariumVacancy()"
-                    formnovalidate
-                  >
+                  <button id="hiddenHonorariumVacancy" type="submit" name="btn" value="setHonorariumVacantTime" class="btn btn-secondary" onloadstart="hideHonorariumVacancy()" formnovalidate disabled>
                     Honorarium/Vacancy
                   </button>
                 </div>
+
+                <!-- JavaScript to disable buttons if - Select Professor - is in the placeholder -->
+                <script>
+                  function checkProfessorSelection() {
+                    var selectElement = document.getElementById("profDetails");
+                    var scheduleButton = document.getElementById("hiddenCheckSchedule");
+                    var honorariumButton = document.getElementById("hiddenHonorariumVacancy");
+
+                    if (selectElement.value === "- Select Professor -") {
+                      scheduleButton.disabled = true;
+                      honorariumButton.disabled = true;
+                    } else {
+                      scheduleButton.disabled = false;
+                      honorariumButton.disabled = false;
+                    }
+                  }
+                </script>
 
                 <div class="pt-3 hidden" id="hiddenDiv">
                   {% if current_professor != 0 and scheduleMode == 1 %}
@@ -494,7 +483,7 @@
             <div class="col-8">
               <div class="bg-primary-subtle p-4 rounded-4">
                 {% for prof in professorData if prof[0] == current_professor %}
-                <h3 class="text-center">Schedule for <b>{{prof[1]}}</b></h3>
+                <h3 class="text-center">Load for <b>{{prof[1]}}</b></h3>
 
                 <div class="container">
                   <!-- TABLE HTML CODE (IT'S NOT EFFICIENT, BUT IT WORKS, PLEASE EDIT WITH CAUTION!)-->
@@ -973,7 +962,7 @@
                   </div>
                   {% else %}
                   <div class="alert alert-info border-3 text-center">
-                    No schedule to be displayed.
+                    DISPLAY COURSE OFFERINGS HERE WITH THE UNITS AND EVERYTHING
                   </div>
                   {% endfor %}
 
@@ -986,7 +975,7 @@
                   >
                     <div class="row">
                       <div class="col d-flex justify-content-start">
-                        <h5 class="py-2">Administrator Options</h5>
+                        <h5 class="py-2">Course Offerings</h5>
                       </div>
                     </div>
 
@@ -1238,26 +1227,29 @@
 
 <!-- SELECTING COURSES TO MANAGE -->
 <div class="modal fade" id="manageExistingCourses" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-lg"> 
     <div class="modal-content">
       <div class="modal-header">
-        <h1 class="modal-title fs-5" id="exampleModalLabel">Select Course</h1>
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Delete Course</h1>
       </div>
-      <div class="modal-body">
+      <!-- v Set the height and added a scrollbar v -->
+      <div class="modal-body" style="max-height: 400px; overflow-y: auto;"> 
         <div class="row">
           <div>
-            <div class="form-floating">
-              <select id="current_courses" class="form-select" name="coursesToBeDeleted" multiple> <!-- changed so it can select multiple courses -->
-                <option selected>- Select courses to delete -</option>
-                {% for prof_courses in courseData %}
-                <option value="{{prof_courses[0]}}">{{ prof_courses[0] }}</option>
-                {% endfor %}
-              </select>
-              <label for="current_courses">Courses to be deleted</label>
-            </div>
+              <div class="form-floating">
+                <!-- v Adjusted font-size and height to fit all courses v -->
+                  <select id="current_courses" class="form-select form-select-lg" name="coursesToBeDeleted" multiple style="font-size: 1.2em; height: 300px;"> 
+                      {% for prof_courses in courseData %}
+                      {% if prof_courses[0] != '' %}
+                      <option value="{{ prof_courses[0] }}">{{ prof_courses[0] }}</option>
+                      {% endif %}
+                      {% endfor %}
+                   </select>
+                  <label for="current_courses">Click and Drag to Select</label>
+               </div>
           </div>
-        </div>
       </div>
+   </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         <button type="button" name="btn" class="btn btn-danger" data-bs-target="#deleteCoursesModal" data-bs-toggle="modal">
@@ -1431,7 +1423,7 @@
       </div>
 
       <div class="py-5 container text-center">
-        <h3>User Request Tab</h3>
+        <h3>Faculty Concerns Tab</h3>
         <hr>
         <button type="submit" name="btn" value="inquiries" formnovalidate class="btn btn-primary text-center pt-2">
           <h5>See Requests</h5>
