@@ -331,23 +331,27 @@ def admin():
                         current_professor=int(current_professor),
                         scheduleMode=scheduleMode)
 
-            if action == "deleteCourse":
-                selectedCourseId = request.form["courseToBeDeleted"]
-                deleteFromCourses = f"DELETE FROM Courses WHERE courseId = '{selectedCourseId}'"
-                deleteFromCourseSchedules = f"DELETE FROM CourseSchedules WHERE courseId = '{selectedCourseId}'"
+            if action == "deleteCourses":
+                selectedCourseIds = request.form.getlist("coursesToBeDeleted")
+                for courseId in selectedCourseIds:
+                    deleteFromCourses = f"DELETE FROM Courses WHERE courseId = '{courseId}'"
+                    deleteFromCourseSchedules = f"DELETE FROM CourseSchedules WHERE courseId = '{courseId}'"
 
-                # NOTE: Schedules first, then the course information after
-                executeQuery(deleteFromCourseSchedules)
-                executeQuery(deleteFromCourses)
+                    # NOTE: Schedules first, then the course information after
+                    executeQuery(deleteFromCourseSchedules)
+                    executeQuery(deleteFromCourses)
+
+                # After deleting all selected courses
                 professorData = executeQuery(getProfessorsQuery)
                 courseData = executeQuery(getCoursesQuery)
                 scheduleData = executeQuery(getCourseSchedulesQuery)
                 return render_template('admin.html',
-                    professorData=professorData,
-                    courseData=courseData,
-                    scheduleData=scheduleData,
-                    current_professor=int(current_professor),
-                    scheduleMode=scheduleMode)
+                                    professorData=professorData,
+                                    courseData=courseData,
+                                    scheduleData=scheduleData,
+                                    current_professor=int(current_professor),
+                                    scheduleMode=scheduleMode)
+
 
             if action == "deleteUser":
                 current_professor = request.form['professorDetails']
@@ -489,87 +493,3 @@ def executeQuery(checkQuery, params=None):
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
