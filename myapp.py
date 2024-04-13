@@ -7,6 +7,8 @@ from werkzeug.utils import secure_filename
 import os
 import pypyodbc as odbc
 import process_excel as pe
+import alert_files.admin_alert as admin_alert
+import alert_files.user_alert as user_alert
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -16,17 +18,14 @@ app.config["UPLOAD_FOLDER"] = "static/files/"
 ALLOWED_EXTENSIONS = {'xlsx'}
 Session(app)
 
-server = 'umakclassscheduler.database.windows.net'
+server = 'umakscheduler.database.windows.net'
 database = 'SchedulerDB'
-connString = 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:umakscheduler.database.windows.net,1433;Database='+database+';Uid=umakscheduler;Pwd=Adminschedule123;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;'
+connString = 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:'+server+',1433;Database='+database+';Uid=umakscheduler;Pwd=Adminschedule123;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;'
 
 @app.route('/')
 def home():
     if 'userId' not in session:
         return redirect(url_for('login')) # IF: Not logged in, redirect to login page
-
-    query = "SELECT * FROM Professors"
-    return executeQuery(query)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -40,10 +39,12 @@ def login():
             if currentEmployeeId != 0000 and currentPassword != 'admin':
                 session["userId"] = currentEmployeeId
                 return redirect(url_for('index'))
-            
-            # IF: User is 'admin': proceed to Admin Portal
-            session['userId'] = '0000'
-            return redirect(url_for('admin'))
+            else:
+                # IF: User is 'admin': proceed to Admin Portal
+                session['userId'] = '0000'
+                return redirect(url_for('admin'))
+        
+        return user_alert.invalid_login_credentials()
 
     return render_template('login.html')
 
@@ -61,13 +62,12 @@ def register():
         checkResult = executeQuery(checkQuery)
 
         if checkResult: # IF: an existing professorId is detected -> return redirect('/register')
-            return redirect(url_for('register'))
+            return user_alert.invalid_existing_user()
         else:
             executeQuery(insertQuery)
             executeQuery(insertHonorariumToken)
             executeQuery(insertVacantToken)
-            print("TEST (Register Page): You have inserted into the database!")
-            return redirect(url_for('login'))
+            return user_alert.success_registration()
  
     return render_template('register.html')
 
@@ -92,14 +92,14 @@ def index():
 
             if action == 'logout':
                 session.pop('userId', 0)
-                return redirect("/login")
+                return user_alert.success_user_logout()
 
             if action == 'submitInquiry':
                 inquirySubject = request.form['messageSubject']
                 inquiryMessage = request.form['message']
                 insertInquiryQuery = f"INSERT INTO ProfessorInquiries (professorId, inqSubject, inqMessage, inqStatus) VALUES ({currentId}, '{inquirySubject}', '{inquiryMessage}', 'Unresolved')"
                 executeQuery(insertInquiryQuery)
-                return "<script>alert('Your response was recorded.')</script>"
+                return user_alert.success_submit_inquiry()
 
         return render_template("index.html",
         current_professor=currentId,
@@ -123,8 +123,14 @@ def admin():
         getCourseSchedulesQuery = "SELECT * FROM CourseSchedules"
         scheduleData = executeQuery(getCourseSchedulesQuery)
 
+        getRoomsQuery = "SELECT * FROM Rooms"
+        roomData = executeQuery(getRoomsQuery)
+
+        for prof in professorData:
+            print(prof[1])
+
         current_professor = 0 # INIT: No value needed
-        scheduleMode = 0
+        scheduleMode = 0 # INIT: No value needed
         
         if request.method == "POST":
             action = request.form['btn']
@@ -134,55 +140,59 @@ def admin():
 
             if action == 'logout':
                 session.pop('userId', 0)
-                return redirect("/login")
+                return admin_alert.success_admin_logout()
 
             if action == 'addCourse':
                 newCourseCode = request.form['courseCode'].upper()
                 newCourseName = request.form['courseName'].upper()
                 newCourseYear = request.form['courseYear']
                 newCourseUnits = request.form['courseUnits']
+                newCourseType = request.form['courseType']
                 checkQuery = f"SELECT * FROM Courses WHERE courseId = '{newCourseCode}'"
-                insertQuery = f"INSERT INTO Courses (courseId, courseName, courseYear, courseUnits) VALUES ('{newCourseCode}', '{newCourseName}', '{newCourseYear}', {newCourseUnits})"
+                insertQuery = f"INSERT INTO Courses (courseId, courseName, courseYear, courseUnits, courseType) VALUES ('{newCourseCode}', '{newCourseName}', '{newCourseYear}', {newCourseUnits}, '{newCourseType}')"
                 checkResult = executeQuery(checkQuery)
 
                 if checkResult:
-                    print("TEST (Admin Page): The course already exists!") # TEST: Test Validation
+                    return admin_alert.invalid_course_exists(newCourseCode)
                 else:
                     executeQuery(insertQuery)
-                    print("TEST (Admin Page): You have inserted into the database!") # TEST: Test Validation
                     professorData = executeQuery(getProfessorsQuery)
                     courseData = executeQuery(getCoursesQuery)
                     scheduleData = executeQuery(getCourseSchedulesQuery)
-                    return render_template('admin.html',
-                        professorData=professorData,
-                        courseData=courseData,
-                        scheduleData=scheduleData,
-                        current_professor=int(current_professor),
-                        scheduleMode=scheduleMode)
+                    roomData = executeQuery(getRoomsQuery)
+                    current_professor = int(current_professor)
+                    return admin_alert.success_course_add(newCourseCode)
 
             if action == 'checkProfessorSchedule':
                 scheduleMode = 1
                 try:
-                    current_professor = request.form['professorDetails']
+                    current_professor = request.form['hiddenProfessorDetails']
+                    request.form
                 except:
                     return redirect(url_for('admin'))
 
             if action == 'setHonorariumVacantTime':
                 scheduleMode = 2
                 try:
-                    current_professor = request.form['professorDetails']
+                    current_professor = request.form['hiddenProfessorDetails']
                 except:
                     return redirect(url_for('admin'))
 
             if action == 'manageCourse':
                 scheduleMode = 1
+                currentType = ""
+                maxHours = 0
+                genEdImplicitDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday']
                 current_course = request.form['currentCourse'].upper()
-                current_professor = request.form['professorDetails']
+                current_professor = request.form['hiddenProfessorDetails']
                 newCourseSection = request.form['courseSection'].upper()
                 newStartTime = request.form['startTime']
                 newEndTime = request.form['endingTime']
                 newDayOfWeek = request.form['dayOfWeek']
                 newRoom = request.form['courseRoom'].upper()
+
+                if newRoom == "":
+                    newRoom = "Virtual"
 
                 ifProfessorExists = False
                 ifNoProfessorExists = False
@@ -197,80 +207,102 @@ def admin():
                         ifNoProfessorExists = True
                         break
 
-                insertScheduleQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES ('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', '{newDayOfWeek}', '{newStartTime}', '{newEndTime}')"
+                insertScheduleQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES "
                 updateCourseQuery = f"UPDATE Courses SET professorId = {current_professor} WHERE courseId = '{current_course}'"
-                checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE startTime = '{newStartTime}' AND endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}'"
+                checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE courseId = '{current_course}' and startTime = '{newStartTime}' AND endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}'"
+                checkCourseType = f"SELECT courseType FROM Courses WHERE courseId = '{current_course}'"
+                checkIfSameRoom = f"SELECT * FROM CourseSchedules WHERE startTime = '{newStartTime}' and endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}' and room = '{newRoom}'"
+                sameRoom = executeQuery(checkIfSameRoom)
 
-                checkExceeds3Hours = f"""
-                                        SELECT professorId, 
-                                            SUM(DATEDIFF(MINUTE, startTime, endTime) / 60.0) AS totalScheduledHours
-                                        FROM CourseSchedules
-                                        WHERE professorId = {int(current_professor)}
-                                        AND courseId = '{current_course}'
-                                        GROUP BY professorId
-                                        HAVING SUM(DATEDIFF(MINUTE, startTime, endTime) / 60.0) >= 3;
-                                        """
+                getCourseType = executeQuery(checkCourseType)
+                for types in getCourseType:
+                    currentType = types[0]
                 
-                if (scheduleData): # IF: Records exist in CourseSchedules Table -> proceed with logic
+                print(currentType)
+                if currentType == 'Major':
+                    maxHours = 3
+                else:
+                    maxHours = 1.5
+
+                if newDayOfWeek in genEdImplicitDays and currentType == 'GenEd':
+                    print("ERROR: You cannot schedule GenEd classes on these specific days. Try again.")
+                else:
+                    if newDayOfWeek == "Monday" or newDayOfWeek == "Thursday":
+                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{newStartTime}', '{newEndTime}'), "
+                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{newStartTime}', '{newEndTime}')"
+                    elif newDayOfWeek == "Tuesday" or newDayOfWeek == "Friday":
+                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{newStartTime}', '{newEndTime}'), "
+                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{newStartTime}', '{newEndTime}')"
+
+                    print(insertScheduleQuery)
+
+                    checkExceedsHours = f"""
+                                            SELECT cs.professorId, 
+                                                SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) AS totalScheduledHours
+                                            FROM CourseSchedules cs
+                                            JOIN Courses c ON cs.courseId = c.courseId
+                                            WHERE cs.professorId = {current_professor}
+                                            AND cs.courseId = '{current_course}'
+                                            AND c.courseType = '{currentType}'
+                                            GROUP BY cs.professorId
+                                            HAVING SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) >= {maxHours};
+                                            """
                     
-                    if (ifProfessorExists == True): # IF: Current professor being assigned is assigned to the current_course -> proceed with logic
-                        if (executeQuery(checkIfSameTime)):
-                            print("\n\nTEST (Admin Page): There is a subject already assigned in the same time!\n\n") # TEST: Test Validation
-                        else:
-                            if (executeQuery(checkExceeds3Hours)):
-                                print("\n\nTEST (Admin Page): Already has 3 hours in slot!\n\n") # TEST: Test Validation
+                    if (scheduleData): # IF: Records exist in CourseSchedules Table -> proceed with logic
+                        
+                        if (ifProfessorExists == True): # IF: Current professor being assigned is assigned to the current_course -> proceed with logic
+                            if (sameRoom):
+                                return admin_alert.invalid_existing_room(sameRoom)
                             else:
-                                print("\n\nTEST (Admin Page): Inserted into the database!\n\n") # TEST: Test Validation
-                                executeQuery(insertScheduleQuery)
-                                professorData = executeQuery(getProfessorsQuery)
-                                courseData = executeQuery(getCoursesQuery)
-                                scheduleData = executeQuery(getCourseSchedulesQuery)
-                                return render_template('admin.html',
-                                    professorData=professorData,
-                                    courseData=courseData,
-                                    scheduleData=scheduleData,
-                                    current_professor=int(current_professor),
-                                    scheduleMode=scheduleMode)
-
-                    else:
-                        if (ifNoProfessorExists):
-                            if (executeQuery(checkIfSameTime)):
-                                print("\n\nTEST (Admin Page): This subject is already assigned in the same time!\n\n") # TEST: Test Validation
-                            else:
-                                if (executeQuery(checkExceeds3Hours)):
-                                    print("\n\nTEST (Admin Page): Already has 3 hours in slot!\n\n") # TEST: Test Validation
+                                if (executeQuery(checkIfSameTime)):
+                                    return admin_alert.invalid_existing_course_timeslot(current_course)
                                 else:
-                                    print("\n\nTEST (Admin Page): Inserted into the database!\n\n") # TEST: Test Validation
-                                    executeQuery(insertScheduleQuery)
-                                    executeQuery(updateCourseQuery)
-                                    professorData = executeQuery(getProfessorsQuery)
-                                    courseData = executeQuery(getCoursesQuery)
-                                    scheduleData = executeQuery(getCourseSchedulesQuery)
-                                    return render_template('admin.html',
-                                        professorData=professorData,
-                                        courseData=courseData,
-                                        scheduleData=scheduleData,
-                                        current_professor=int(current_professor),
-                                        scheduleMode=scheduleMode)
-                        else:
-                            print("\n\nTEST (Admin Page): There is already a professor assigned in this course!\n\n") # TEST: Test Validation
+                                    if (executeQuery(checkExceedsHours)):
+                                        return admin_alert.invalid_maximum_timeslot(current_course, currentType)
+                                    else:
+                                        executeQuery(insertScheduleQuery)
+                                        professorData = executeQuery(getProfessorsQuery)
+                                        courseData = executeQuery(getCoursesQuery)
+                                        scheduleData = executeQuery(getCourseSchedulesQuery)
+                                        roomData = executeQuery(getRoomsQuery)
+                                        current_professor=int(current_professor)
+                                        scheduleMode=scheduleMode
 
-                else: # ELSE: If no records exist, insert new schedule into the table
-                    executeQuery(insertScheduleQuery)
-                    executeQuery(updateCourseQuery)
-                    professorData = executeQuery(getProfessorsQuery)
-                    courseData = executeQuery(getCoursesQuery)
-                    scheduleData = executeQuery(getCourseSchedulesQuery)
-                    return render_template('admin.html',
-                        professorData=professorData,
-                        courseData=courseData,
-                        scheduleData=scheduleData,
-                        current_professor=int(current_professor),
-                        scheduleMode=scheduleMode)
+                        else:
+                            if (ifNoProfessorExists):
+                                if (sameRoom):
+                                    return admin_alert.invalid_existing_room(sameRoom)
+                                else:
+                                    if (executeQuery(checkIfSameTime)):
+                                        return admin_alert.invalid_existing_course_timeslot(current_course)
+                                    else:
+                                        if (executeQuery(checkExceedsHours)):
+                                            return admin_alert.invalid_maximum_timeslot(current_course, currentType)
+                                        else:
+                                            executeQuery(insertScheduleQuery)
+                                            executeQuery(updateCourseQuery)
+                                            professorData = executeQuery(getProfessorsQuery)
+                                            courseData = executeQuery(getCoursesQuery)
+                                            scheduleData = executeQuery(getCourseSchedulesQuery)
+                                            roomData = executeQuery(getRoomsQuery)
+                                            current_professor=int(current_professor)
+                                            scheduleMode=scheduleMode
+                            else:
+                                return admin_alert.invalid_existing_professor_in_course(current_course)
+
+                    else: # ELSE: If no records exist, insert new schedule into the table
+                        executeQuery(insertScheduleQuery)
+                        executeQuery(updateCourseQuery)
+                        professorData = executeQuery(getProfessorsQuery)
+                        courseData = executeQuery(getCoursesQuery)
+                        scheduleData = executeQuery(getCourseSchedulesQuery)
+                        roomData = executeQuery(getRoomsQuery)
+                        current_professor=int(current_professor)
+                        scheduleMode=scheduleMode
 
             if action == 'insertHonorariumVacant':
                 scheduleMode = 2
-                current_professor = request.form['professorDetails']
+                current_professor = request.form['hiddenProfessorDetails']
                 otherScheduleType = request.form['honorVacantChoice']
                 honorVacantDayOfWeek = request.form['honorVacantDayOfWeek']
                 honorVacantStartTime = request.form['honorVacantStartTime']
@@ -302,34 +334,26 @@ def admin():
 
                 if scheduleData:
                     if (executeQuery(checkSameHonorVacantTime)):
-                        print(f"\n\nTEST (Admin Page): {otherScheduleType} is already assigned in the same time!\n\n") # TEST: Test Validation
+                        return admin_alert.invalid_existing_honorVacant_timeslot(otherScheduleType)
                     else:
                         if (executeQuery(checkExceedsHourMins)):
-                            print("\n\nTEST (Admin Page): Already has 1.5 hours in slot!\n\n") # TEST: Test Validation
+                            return admin_alert.invalid_maximum_honorVacant_timeslot(otherScheduleType)
                         else:
-                            print("\n\nTEST (Admin Page): Inserted into the database!\n\n") # TEST: Test Validation
                             executeQuery(insertHonorVacantQuery)
                             professorData = executeQuery(getProfessorsQuery)
                             courseData = executeQuery(getCoursesQuery)
                             scheduleData = executeQuery(getCourseSchedulesQuery)
-                            return render_template('admin.html',
-                                professorData=professorData,
-                                courseData=courseData,
-                                scheduleData=scheduleData,
-                                current_professor=int(current_professor),
-                                scheduleMode=scheduleMode)
+                            roomData = executeQuery(getRoomsQuery)
+                            current_professor=int(current_professor)
+                            scheduleMode=scheduleMode
                 else:
                     executeQuery(insertHonorVacantQuery)
-                    print("\n\nTEST (Admin Page): Inserted into the database!\n\n") # TEST: Test Validation
                     professorData = executeQuery(getProfessorsQuery)
                     courseData = executeQuery(getCoursesQuery)
                     scheduleData = executeQuery(getCourseSchedulesQuery)
-                    return render_template('admin.html',
-                        professorData=professorData,
-                        courseData=courseData,
-                        scheduleData=scheduleData,
-                        current_professor=int(current_professor),
-                        scheduleMode=scheduleMode)
+                    roomData = executeQuery(getRoomsQuery)
+                    current_professor=int(current_professor)
+                    scheduleMode=scheduleMode
 
             if action == "deleteCourses":
                 selectedCourseIds = request.form.getlist("coursesToBeDeleted")
@@ -341,57 +365,82 @@ def admin():
                     executeQuery(deleteFromCourseSchedules)
                     executeQuery(deleteFromCourses)
 
-                # After deleting all selected courses
+                # After deleting selected courses
                 professorData = executeQuery(getProfessorsQuery)
                 courseData = executeQuery(getCoursesQuery)
                 scheduleData = executeQuery(getCourseSchedulesQuery)
-                return render_template('admin.html',
-                                    professorData=professorData,
-                                    courseData=courseData,
-                                    scheduleData=scheduleData,
-                                    current_professor=int(current_professor),
-                                    scheduleMode=scheduleMode)
-
+                roomData = executeQuery(getRoomsQuery)
+                current_professor = int(current_professor)
+                scheduleMode = scheduleMode
 
             if action == "deleteUser":
-                current_professor = request.form['professorDetails']
+                professorName = ""
+                current_professor = request.form['hiddenProfessorDetails']
                 deleteProfessorSchedule = f"DELETE FROM CourseSchedules WHERE professorId = {current_professor}"
                 deleteHonorariumVacant = f"DELETE FROM Courses WHERE courseId = '{'HT' + current_professor}' or courseId = '{'VT' + current_professor}'"
                 deleteProfessor = f"DELETE FROM Professors WHERE employeeId = {current_professor}"
                 updateCourses = f"UPDATE Courses SET professorId = '' WHERE professorId = {current_professor}"
+
+                for prof in professorData:
+                    if prof[0] == int(current_professor):
+                        prof[1] = professorName
+
                 executeQuery(deleteProfessorSchedule)
                 executeQuery(deleteHonorariumVacant)
                 executeQuery(updateCourses)
                 executeQuery(deleteProfessor)
-                return redirect(url_for('admin'))
+                return admin_alert.success_delete_user(current_professor, professorName)
             
             if action == "markComplete":
-                current_professor = request.form['professorDetails']
+                current_professor = request.form['hiddenProfessorDetails']
                 markCompleteQuery = f"UPDATE Professors SET employeeSchedule = 'Complete' WHERE employeeId = {current_professor}"
                 executeQuery(markCompleteQuery)
                 professorData = executeQuery(getProfessorsQuery)
                 courseData = executeQuery(getCoursesQuery)
                 scheduleData = executeQuery(getCourseSchedulesQuery)
+                roomData = executeQuery(getRoomsQuery)
                 return render_template('admin.html',
                     professorData=professorData,
                     courseData=courseData,
                     scheduleData=scheduleData,
+                    roomData=roomData, 
                     current_professor=int(current_professor),
                     scheduleMode=1)
 
             if action == "markIncomplete":
-                current_professor = request.form['professorDetails']
+                current_professor = request.form['hiddenProfessorDetails']
                 markIncompleteQuery = f"UPDATE Professors SET employeeSchedule = 'Incomplete' WHERE employeeId = {current_professor}"
                 executeQuery(markIncompleteQuery)
                 professorData = executeQuery(getProfessorsQuery)
                 courseData = executeQuery(getCoursesQuery)
                 scheduleData = executeQuery(getCourseSchedulesQuery)
+                roomData = executeQuery(getRoomsQuery)
                 return render_template('admin.html',
                     professorData=professorData,
                     courseData=courseData,
-                    scheduleData=scheduleData,
+                    scheduleData=scheduleData, 
+                    roomData=roomData, 
                     current_professor=int(current_professor),
                     scheduleMode=1)
+
+            if action == "resetSchedule":
+                current_professor = request.form['hiddenProfessorDetails']
+                deleteProfInScheduleQuery = f"DELETE FROM CourseSchedules WHERE professorId = {current_professor}"
+                deleteCoursesFromProfQuery = f"UPDATE Courses SET professorId = NULL WHERE professorId = {current_professor}"
+                executeQuery(deleteProfInScheduleQuery)
+                executeQuery(deleteCoursesFromProfQuery)
+                professorData = executeQuery(getProfessorsQuery)
+                courseData = executeQuery(getCoursesQuery)
+                scheduleData = executeQuery(getCourseSchedulesQuery)
+                roomData = executeQuery(getRoomsQuery)
+                return render_template('admin.html',
+                    professorData=professorData,
+                    courseData=courseData,
+                    scheduleData=scheduleData, 
+                    roomData=roomData, 
+                    current_professor=int(current_professor),
+                    scheduleMode=1)
+
 
             if action == "uploadExcel":
                 if 'file' not in request.files:
@@ -404,7 +453,7 @@ def admin():
                     filename = secure_filename(file.filename)
                     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                     executeQuery(pe.readContents(filename))
-                    return '<script>alert("Subjects have been successfully imported.");window.location.href="/admin";</script>'
+                    return admin_alert.success_subject_import()
 
             if action == "inquiries":
                 return redirect(url_for('inquiries'))
@@ -413,6 +462,7 @@ def admin():
                 professorData=professorData,
                 courseData=courseData,
                 scheduleData=scheduleData,
+                roomData=roomData,
                 current_professor=int(current_professor),
                 scheduleMode=scheduleMode)
 
