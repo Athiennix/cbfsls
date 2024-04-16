@@ -207,98 +207,107 @@ def admin():
                         ifNoProfessorExists = True
                         break
 
-                insertScheduleQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES "
-                updateCourseQuery = f"UPDATE Courses SET professorId = {current_professor} WHERE courseId = '{current_course}'"
-                checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE courseId = '{current_course}' and startTime = '{newStartTime}' AND endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}'"
-                checkCourseType = f"SELECT courseType FROM Courses WHERE courseId = '{current_course}'"
-                checkIfSameRoom = f"SELECT * FROM CourseSchedules WHERE startTime = '{newStartTime}' and endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}' and room = '{newRoom}'"
-                sameRoom = executeQuery(checkIfSameRoom)
+                # Retrieve current_course_section from courseData
+                current_course_section = next((course[5] for course in courseData if course[0] == current_course), None)
 
-                getCourseType = executeQuery(checkCourseType)
-                for types in getCourseType:
-                    currentType = types[0]
-                
-                print(currentType)
-                if currentType == 'Major':
-                    maxHours = 3
-                else:
-                    maxHours = 1.5
+                # Check if the new section is different from current section
+                if newCourseSection != current_course_section:
 
-                if newDayOfWeek in genEdImplicitDays and currentType == 'GenEd':
-                    print("ERROR: You cannot schedule GenEd classes on these specific days. Try again.")
-                else:
-                    if newDayOfWeek == "Monday" or newDayOfWeek == "Thursday":
-                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{newStartTime}', '{newEndTime}'), "
-                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{newStartTime}', '{newEndTime}')"
-                    elif newDayOfWeek == "Tuesday" or newDayOfWeek == "Friday":
-                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{newStartTime}', '{newEndTime}'), "
-                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{newStartTime}', '{newEndTime}')"
+                    # Check if the course is not already assigned to the new section
+                    if not any(course[0] == current_course and course[5] == newCourseSection for course in courseData):
+                        # Proceed with reassignment
+                        insertScheduleQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES "
+                        updateCourseQuery = f"UPDATE Courses SET professorId = {current_professor} WHERE courseId = '{current_course}'"
+                        checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE courseId = '{current_course}' and startTime = '{newStartTime}' AND endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}'"
+                        checkCourseType = f"SELECT courseType FROM Courses WHERE courseId = '{current_course}'"
+                        checkIfSameRoom = f"SELECT * FROM CourseSchedules WHERE startTime = '{newStartTime}' and endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}' and room = '{newRoom}'"
+                        sameRoom = executeQuery(checkIfSameRoom)
 
-                    print(insertScheduleQuery)
-
-                    checkExceedsHours = f"""
-                                            SELECT cs.professorId, 
-                                                SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) AS totalScheduledHours
-                                            FROM CourseSchedules cs
-                                            JOIN Courses c ON cs.courseId = c.courseId
-                                            WHERE cs.professorId = {current_professor}
-                                            AND cs.courseId = '{current_course}'
-                                            AND c.courseType = '{currentType}'
-                                            GROUP BY cs.professorId
-                                            HAVING SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) >= {maxHours};
-                                            """
-                    
-                    if (scheduleData): # IF: Records exist in CourseSchedules Table -> proceed with logic
+                        getCourseType = executeQuery(checkCourseType)
+                        for types in getCourseType:
+                            currentType = types[0]
                         
-                        if (ifProfessorExists == True): # IF: Current professor being assigned is assigned to the current_course -> proceed with logic
-                            if (sameRoom):
-                                return admin_alert.invalid_existing_room(sameRoom)
-                            else:
-                                if (executeQuery(checkIfSameTime)):
-                                    return admin_alert.invalid_existing_course_timeslot(current_course)
-                                else:
-                                    if (executeQuery(checkExceedsHours)):
-                                        return admin_alert.invalid_maximum_timeslot(current_course, currentType)
-                                    else:
-                                        executeQuery(insertScheduleQuery)
-                                        professorData = executeQuery(getProfessorsQuery)
-                                        courseData = executeQuery(getCoursesQuery)
-                                        scheduleData = executeQuery(getCourseSchedulesQuery)
-                                        roomData = executeQuery(getRoomsQuery)
-                                        current_professor=int(current_professor)
-                                        scheduleMode=scheduleMode
-
+                        print(currentType)
+                        if currentType == 'Major':
+                            maxHours = 3
                         else:
-                            if (ifNoProfessorExists):
-                                if (sameRoom):
-                                    return admin_alert.invalid_existing_room(sameRoom)
-                                else:
-                                    if (executeQuery(checkIfSameTime)):
-                                        return admin_alert.invalid_existing_course_timeslot(current_course)
-                                    else:
-                                        if (executeQuery(checkExceedsHours)):
-                                            return admin_alert.invalid_maximum_timeslot(current_course, currentType)
-                                        else:
-                                            executeQuery(insertScheduleQuery)
-                                            executeQuery(updateCourseQuery)
-                                            professorData = executeQuery(getProfessorsQuery)
-                                            courseData = executeQuery(getCoursesQuery)
-                                            scheduleData = executeQuery(getCourseSchedulesQuery)
-                                            roomData = executeQuery(getRoomsQuery)
-                                            current_professor=int(current_professor)
-                                            scheduleMode=scheduleMode
-                            else:
-                                return admin_alert.invalid_existing_professor_in_course(current_course)
+                            maxHours = 1.5
 
-                    else: # ELSE: If no records exist, insert new schedule into the table
-                        executeQuery(insertScheduleQuery)
-                        executeQuery(updateCourseQuery)
-                        professorData = executeQuery(getProfessorsQuery)
-                        courseData = executeQuery(getCoursesQuery)
-                        scheduleData = executeQuery(getCourseSchedulesQuery)
-                        roomData = executeQuery(getRoomsQuery)
-                        current_professor=int(current_professor)
-                        scheduleMode=scheduleMode
+                        if newDayOfWeek in genEdImplicitDays and currentType == 'GenEd':
+                            print("ERROR: You cannot schedule GenEd classes on these specific days. Try again.")
+                        else:
+                            if newDayOfWeek == "Monday" or newDayOfWeek == "Thursday":
+                                insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{newStartTime}', '{newEndTime}'), "
+                                insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{newStartTime}', '{newEndTime}')"
+                            elif newDayOfWeek == "Tuesday" or newDayOfWeek == "Friday":
+                                insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{newStartTime}', '{newEndTime}'), "
+                                insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{newStartTime}', '{newEndTime}')"
+
+                            print(insertScheduleQuery)
+
+                            checkExceedsHours = f"""
+                                                    SELECT cs.professorId, 
+                                                        SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) AS totalScheduledHours
+                                                    FROM CourseSchedules cs
+                                                    JOIN Courses c ON cs.courseId = c.courseId
+                                                    WHERE cs.professorId = {current_professor}
+                                                    AND cs.courseId = '{current_course}'
+                                                    AND c.courseType = '{currentType}'
+                                                    GROUP BY cs.professorId
+                                                    HAVING SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) >= {maxHours};
+                                                    """
+                            
+                            if (scheduleData): # IF: Records exist in CourseSchedules Table -> proceed with logic
+                                
+                                if (ifProfessorExists == True): # IF: Current professor being assigned is assigned to the current_course -> proceed with logic
+                                    if (sameRoom):
+                                        return admin_alert.invalid_existing_room(sameRoom)
+                                    else:
+                                        if (executeQuery(checkIfSameTime)):
+                                            return admin_alert.invalid_existing_course_timeslot(current_course)
+                                        else:
+                                            if (executeQuery(checkExceedsHours)):
+                                                return admin_alert.invalid_maximum_timeslot(current_course, currentType)
+                                            else:
+                                                executeQuery(insertScheduleQuery)
+                                                professorData = executeQuery(getProfessorsQuery)
+                                                courseData = executeQuery(getCoursesQuery)
+                                                scheduleData = executeQuery(getCourseSchedulesQuery)
+                                                roomData = executeQuery(getRoomsQuery)
+                                                current_professor=int(current_professor)
+                                                scheduleMode=scheduleMode
+
+                                else:
+                                    if (ifNoProfessorExists):
+                                        if (sameRoom):
+                                            return admin_alert.invalid_existing_room(sameRoom)
+                                        else:
+                                            if (executeQuery(checkIfSameTime)):
+                                                return admin_alert.invalid_existing_course_timeslot(current_course)
+                                            else:
+                                                if (executeQuery(checkExceedsHours)):
+                                                    return admin_alert.invalid_maximum_timeslot(current_course, currentType)
+                                                else:
+                                                    executeQuery(insertScheduleQuery)
+                                                    executeQuery(updateCourseQuery)
+                                                    professorData = executeQuery(getProfessorsQuery)
+                                                    courseData = executeQuery(getCoursesQuery)
+                                                    scheduleData = executeQuery(getCourseSchedulesQuery)
+                                                    roomData = executeQuery(getRoomsQuery)
+                                                    current_professor=int(current_professor)
+                                                    scheduleMode=scheduleMode
+                                    else:
+                                        return admin_alert.invalid_existing_professor_in_course(current_course)
+
+                            else: # ELSE: If no records exist, insert new schedule into the table
+                                executeQuery(insertScheduleQuery)
+                                executeQuery(updateCourseQuery)
+                                professorData = executeQuery(getProfessorsQuery)
+                                courseData = executeQuery(getCoursesQuery)
+                                scheduleData = executeQuery(getCourseSchedulesQuery)
+                                roomData = executeQuery(getRoomsQuery)
+                                current_professor=int(current_professor)
+                                scheduleMode=scheduleMode
 
             if action == 'insertHonorariumVacant':
                 scheduleMode = 2
