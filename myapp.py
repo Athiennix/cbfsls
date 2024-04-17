@@ -1,7 +1,7 @@
 # USERNAME: umakscheduler
 # PASSWORD: Adminschedule123
 
-from flask import Flask, render_template, redirect, request, session, url_for
+from flask import Flask, render_template, redirect, request, session, url_for, flash
 from flask_session import Session
 from werkzeug.utils import secure_filename
 import os
@@ -9,6 +9,7 @@ import pypyodbc as odbc
 import process_excel as pe
 import alert_files.admin_alert as admin_alert
 import alert_files.user_alert as user_alert
+import re
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -54,6 +55,13 @@ def register():
         new_EmployeeId = request.form['employeeId']
         new_EmployeeName = request.form['employeeName']
         new_EmployeePassword = request.form['password']
+
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_EmployeePassword) \
+            or not re.search(r'\d', new_EmployeePassword) \
+            or not re.search(r'[A-Z]', new_EmployeePassword):
+            
+            flash("Password must contain at least one special character, one number, and one uppercase letter.")
+            return redirect(url_for('register'))  # Redirect back to the registration page
 
         checkQuery = f"SELECT * FROM Professors WHERE employeeId = {new_EmployeeId}"
         insertQuery = f"INSERT INTO Professors (employeeId, employeeName, employeePassword, employeeSchedule) VALUES ({new_EmployeeId}, '{new_EmployeeName}', '{new_EmployeePassword}', 'Incomplete')"
