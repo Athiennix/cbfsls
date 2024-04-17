@@ -100,18 +100,20 @@ def index():
                 insertInquiryQuery = f"INSERT INTO ProfessorInquiries (professorId, inqSubject, inqMessage, inqStatus) VALUES ({currentId}, '{inquirySubject}', '{inquiryMessage}', 'Unresolved')"
                 executeQuery(insertInquiryQuery)
                 return user_alert.success_submit_inquiry()
-
+            
         return render_template("index.html",
         current_professor=currentId,
         professorData=professorData,
         courseData=courseData,
         scheduleData=scheduleData)
 
+
 # CODE BLOCK: Admin Page
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if 'userId' not in session or session['userId'] != '0000':
         return redirect(url_for("login")) # IF: Not logged in, redirect to login page
+    
     
     else:
         getProfessorsQuery = "SELECT employeeId, employeeName, employeeSchedule FROM Professors WHERE employeeId != 0000"
@@ -258,7 +260,6 @@ def admin():
                                                     """
                             
                             if (scheduleData): # IF: Records exist in CourseSchedules Table -> proceed with logic
-                                
                                 if (ifProfessorExists == True): # IF: Current professor being assigned is assigned to the current_course -> proceed with logic
                                     if (sameRoom):
                                         return admin_alert.invalid_existing_room(sameRoom)
@@ -309,6 +310,13 @@ def admin():
                                 current_professor=int(current_professor)
                                 scheduleMode=scheduleMode
 
+                else:
+                    # Check for time conflicts only if the new section is the same as the current section
+                    checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE courseId = '{current_course}' and startTime = '{newStartTime}' AND endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}'"
+                    if (executeQuery(checkIfSameTime)):
+                        return admin_alert.invalid_existing_course_timeslot(current_course)
+
+                   
             if action == 'insertHonorariumVacant':
                 scheduleMode = 2
                 current_professor = request.form['hiddenProfessorDetails']
@@ -449,24 +457,24 @@ def admin():
                     roomData=roomData, 
                     current_professor=int(current_professor),
                     scheduleMode=1)
-
-
+            
             if action == "uploadExcel":
                 if 'file' not in request.files:
-                    return '<script>alert("File not found.");</script>'
+                        return '<script>alert("File not found.");</script>'
                 
                 file = request.files['file']
                 if file.filename == '':
-                    return "No selected file."
+                        return "No selected file."
                 if file and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    executeQuery(pe.readContents(filename))
-                    return admin_alert.success_subject_import()
+                        filename = secure_filename(file.filename)
+                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                        executeQuery(pe.readContents(filename))
+                        return admin_alert.success_subject_import()
+            
 
             if action == "inquiries":
                 return redirect(url_for('inquiries'))
-
+            
         return render_template('admin.html',
                 professorData=professorData,
                 courseData=courseData,
