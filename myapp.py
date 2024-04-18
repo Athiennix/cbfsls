@@ -381,15 +381,17 @@ def admin():
                 deleteProfessor = f"DELETE FROM Professors WHERE employeeId = {current_professor}"
                 updateCourses = f"UPDATE Courses SET professorId = '' WHERE professorId = {current_professor}"
 
-                for prof in professorData:
+                for i, prof in enumerate(professorData):
                     if prof[0] == int(current_professor):
-                        prof[1] = professorName
+                    # Modify the tuple or list
+                        professorData[i] = (prof[0], professorName) + prof[2:]
 
                 executeQuery(deleteProfessorSchedule)
                 executeQuery(deleteHonorariumVacant)
                 executeQuery(updateCourses)
                 executeQuery(deleteProfessor)
                 return admin_alert.success_delete_user(current_professor, professorName)
+                return redirect(url_for('admin'))  # Assuming 'admin' is the route name for your admin page
             
             if action == "markComplete":
                 current_professor = request.form['hiddenProfessorDetails']
