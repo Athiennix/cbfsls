@@ -259,6 +259,8 @@ def admin():
                             elif newDayOfWeek == "Tuesday" or newDayOfWeek == "Friday":
                                 insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{newStartTime}', '{newEndTime}'), "
                                 insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{newStartTime}', '{newEndTime}')"
+                            else:
+                                insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', '{newDayOfWeek}', '{newStartTime}', '{newEndTime}')"
 
                             print(insertScheduleQuery)
 
