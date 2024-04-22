@@ -259,6 +259,9 @@ def admin():
                             elif newDayOfWeek == "Tuesday" or newDayOfWeek == "Friday":
                                 insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{newStartTime}', '{newEndTime}'), "
                                 insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{newStartTime}', '{newEndTime}')"
+                            elif newDayOfWeek == "Wednesday" or newDayOfWeek == "Saturday":
+                                insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{newStartTime}', '{newEndTime}'), "
+                                insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{newStartTime}', '{newEndTime}')"
                             else:
                                 insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', '{newDayOfWeek}', '{newStartTime}', '{newEndTime}')"
 
@@ -300,7 +303,7 @@ def admin():
                                             current_professor = int(current_professor)
                                             scheduleMode = scheduleMode
                                         else:
-                                            print("ERROR: Course is already assigned to the same section or professor.")
+                                            return admin_alert.invalid_existing_course_assignment(current_course)
                                     else:
                                         executeQuery(insertScheduleQuery)
                                         professorData = executeQuery(getProfessorsQuery)
