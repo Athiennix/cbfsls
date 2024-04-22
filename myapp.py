@@ -77,6 +77,13 @@ def index():
         return redirect(url_for("login")) # IF: Not logged in, redirect to login page
     
     else:
+        course_duration = None
+        if request.method == 'POST':
+            course_duration = request.form.get('course-duration')
+
+            # Do something with the selected course duration
+            print("Selected course duration:", course_duration)
+        
         currentId = int(session['userId'])
         getProfessorsQuery = "SELECT employeeId, employeeName, employeeSchedule FROM Professors WHERE employeeId != 0000"
         professorData = executeQuery(getProfessorsQuery)
@@ -112,7 +119,7 @@ def index():
 def admin():
     if 'userId' not in session or session['userId'] != '0000':
         return redirect(url_for("login")) # IF: Not logged in, redirect to login page
-    
+         
     else:
         getProfessorsQuery = "SELECT employeeId, employeeName, employeeSchedule FROM Professors WHERE employeeId != 0000"
         professorData = executeQuery(getProfessorsQuery)
@@ -134,6 +141,7 @@ def admin():
         
         if request.method == "POST":
             action = request.form['btn']
+            
 
             if action == 'backToAdmin':
                 return redirect("/admin")
@@ -182,7 +190,7 @@ def admin():
                 scheduleMode = 1
                 currentType = ""
                 maxHours = 0
-                genEdImplicitDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday']
+                genEdImplicitDays = ['Monday', 'Tuesday', 'Thursday', 'Friday']
                 current_course = request.form['currentCourse'].upper()
                 current_professor = request.form['hiddenProfessorDetails']
                 newCourseSection = request.form['courseSection'].upper()
@@ -247,58 +255,71 @@ def admin():
                                             GROUP BY cs.professorId
                                             HAVING SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) >= {maxHours};
                                             """
-                    
-                    if (scheduleData): # IF: Records exist in CourseSchedules Table -> proceed with logic
-                        
-                        if (ifProfessorExists == True): # IF: Current professor being assigned is assigned to the current_course -> proceed with logic
-                            if (sameRoom):
+                                
+                        # Check if there are existing schedules for the professor and course
+                    if scheduleData:
+                        # If there is a professor assigned to the course
+                        if ifProfessorExists:
+                            if sameRoom:
                                 return admin_alert.invalid_existing_room(sameRoom)
                             else:
-                                if (executeQuery(checkIfSameTime)):
+                                if executeQuery(checkIfSameTime):
                                     return admin_alert.invalid_existing_course_timeslot(current_course)
                                 else:
-                                    if (executeQuery(checkExceedsHours)):
-                                        return admin_alert.invalid_maximum_timeslot(current_course, currentType)
+                                    if executeQuery(checkExceedsHours):
+                                        # Check if the course is being assigned to a different section for the same professor
+                                        existing_course_section_query = f"SELECT section FROM CourseSchedules WHERE courseId = '{current_course}' AND professorId = {current_professor}"
+                                        existing_course_section = executeQuery(existing_course_section_query)
+                                        if existing_course_section and newCourseSection not in [section[0] for section in existing_course_section]:
+                                            # Different section for the same professor
+                                            executeQuery(insertScheduleQuery)
+                                            professorData = executeQuery(getProfessorsQuery)
+                                            courseData = executeQuery(getCoursesQuery)
+                                            scheduleData = executeQuery(getCourseSchedulesQuery)
+                                            roomData = executeQuery(getRoomsQuery)
+                                            current_professor = int(current_professor)
+                                            scheduleMode = scheduleMode
+                                        else:
+                                            print("ERROR: Course is already assigned to the same section or professor.")
                                     else:
                                         executeQuery(insertScheduleQuery)
                                         professorData = executeQuery(getProfessorsQuery)
                                         courseData = executeQuery(getCoursesQuery)
                                         scheduleData = executeQuery(getCourseSchedulesQuery)
                                         roomData = executeQuery(getRoomsQuery)
-                                        current_professor=int(current_professor)
-                                        scheduleMode=scheduleMode
-
+                                        current_professor = int(current_professor)
+                                        scheduleMode = scheduleMode
                         else:
-                            if (ifNoProfessorExists):
-                                if (sameRoom):
-                                    return admin_alert.invalid_existing_room(sameRoom)
-                                else:
-                                    if (executeQuery(checkIfSameTime)):
-                                        return admin_alert.invalid_existing_course_timeslot(current_course)
-                                    else:
-                                        if (executeQuery(checkExceedsHours)):
-                                            return admin_alert.invalid_maximum_timeslot(current_course, currentType)
-                                        else:
-                                            executeQuery(insertScheduleQuery)
-                                            executeQuery(updateCourseQuery)
-                                            professorData = executeQuery(getProfessorsQuery)
-                                            courseData = executeQuery(getCoursesQuery)
-                                            scheduleData = executeQuery(getCourseSchedulesQuery)
-                                            roomData = executeQuery(getRoomsQuery)
-                                            current_professor=int(current_professor)
-                                            scheduleMode=scheduleMode
+                            # No professor assigned to the course
+                            if sameRoom:
+                                return admin_alert.invalid_existing_room(sameRoom)
                             else:
-                                return admin_alert.invalid_existing_professor_in_course(current_course)
-
-                    else: # ELSE: If no records exist, insert new schedule into the table
+                                if executeQuery(checkIfSameTime):
+                                    return admin_alert.invalid_existing_course_timeslot(current_course)
+                                else:
+                                    if executeQuery(checkExceedsHours):
+                                        return admin_alert.invalid_maximum_timeslot(current_course, currentType)
+                                    else:
+                                        # No issues found, proceed with inserting the schedule
+                                        executeQuery(insertScheduleQuery)
+                                        executeQuery(updateCourseQuery)  # Update course information
+                                        # Update necessary data for UI refresh
+                                        professorData = executeQuery(getProfessorsQuery)
+                                        courseData = executeQuery(getCoursesQuery)
+                                        scheduleData = executeQuery(getCourseSchedulesQuery)
+                                        roomData = executeQuery(getRoomsQuery)
+                                        current_professor = int(current_professor)
+                                        scheduleMode = scheduleMode
+                    else:  # If no records exist, insert new schedule into the table
                         executeQuery(insertScheduleQuery)
-                        executeQuery(updateCourseQuery)
+                        executeQuery(updateCourseQuery)  # Update course information
+                        # Update necessary data for UI refresh
                         professorData = executeQuery(getProfessorsQuery)
                         courseData = executeQuery(getCoursesQuery)
                         scheduleData = executeQuery(getCourseSchedulesQuery)
                         roomData = executeQuery(getRoomsQuery)
-                        current_professor=int(current_professor)
-                        scheduleMode=scheduleMode
+                        current_professor = int(current_professor)
+                        scheduleMode = scheduleMode
 
             if action == 'insertHonorariumVacant':
                 scheduleMode = 2
@@ -391,7 +412,7 @@ def admin():
                 executeQuery(updateCourses)
                 executeQuery(deleteProfessor)
                 return admin_alert.success_delete_user(current_professor, professorName)
-                return redirect(url_for('admin'))  # Assuming 'admin' is the route name for your admin page
+
             
             if action == "markComplete":
                 current_professor = request.form['hiddenProfessorDetails']
@@ -544,4 +565,4 @@ def executeQuery(checkQuery, params=None):
     return data
 
 if __name__ == '__main__':
-    app.run(debug=True)
+        app.run(debug=True)
