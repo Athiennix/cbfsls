@@ -59,6 +59,7 @@
 
     <script>
       var scheduleMode = 0;
+
       function updateHiddenEndTime() {
         var endTime = $("#end-time").val();
         $("#hidden-endingTime").val(endTime);
@@ -66,17 +67,17 @@
 
       function updateEndTime() {
         var startTime = $("#start-time").val();
-        $("#end-time").empty();
-        var endTimeOptions = generateEndTimeOptions(startTime);
-        $("#end-time").append(endTimeOptions);
+        var courseDuration = parseFloat($("#courseDuration").val());
+        var endTimeOptions = generateEndTimeOptions(startTime, courseDuration);
+        $("#end-time").empty().append(endTimeOptions);
         updateHiddenEndTime();
       }
 
-      function generateEndTimeOptions(startTime) {
+      function generateEndTimeOptions(startTime, courseDuration) {
         var startTimeObj = new Date("2000-01-01 " + startTime);
         startTimeObj.setHours(
-          startTimeObj.getHours() + 1,
-          startTimeObj.getMinutes() + 30
+          startTimeObj.getHours() + Math.floor(courseDuration),
+          startTimeObj.getMinutes() + (courseDuration % 1 * 60)
         );
         var endTimeOptions = "";
 
@@ -88,13 +89,19 @@
           });
           endTimeOptions += `<option value="${endTimeValue}">${endTimeText} </option>`;
           startTimeObj.setHours(
-            startTimeObj.getHours() + 1,
-            startTimeObj.getMinutes() + 30
+            startTimeObj.getHours() + Math.floor(courseDuration),
+            startTimeObj.getMinutes() + (courseDuration % 1 * 60)
           );
         }
 
         return endTimeOptions;
       }
+      /* called whenever course duration dropdown changes */
+      $(document).ready(function() {
+        $('#course-duration').change(function() {
+          updateEndTime();
+    });
+  });
 
       function updateHonorVacantHiddenEndTime() {
         var endTime = $("#honor-vacant-end-time").val();
@@ -295,6 +302,16 @@
                       </div>
                     </div>
                   </div>
+
+                  <!-- added dropbox for course duration-->
+                  <div class="form-floating mb-3">
+                    <select class="form-select" name="courseDuration" id="courseDuration">
+                        <option value="1.5">Set 1.5 Hrs</option>
+                        <option value="3">Set 3 Hrs</option>
+                    </select>
+                    <label for="courseDuration">Course Duration</label>
+                </div>
+
                   <div class="row">
                     <div class="col-6 mb-3">
                       <div class="form-floating">
