@@ -56,10 +56,10 @@
       }
 
     </style>
-
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script>
       var scheduleMode = 0;
-
+      
       function updateHiddenEndTime() {
         var endTime = $("#end-time").val();
         $("#hidden-endingTime").val(endTime);
@@ -100,8 +100,8 @@
       $(document).ready(function() {
         $('#course-duration').change(function() {
           updateEndTime();
-    });
-  });
+        });
+        });
 
       function updateHonorVacantHiddenEndTime() {
         var endTime = $("#honor-vacant-end-time").val();
@@ -187,6 +187,7 @@
           document.getElementById("choiceLabel").style.display = "none";
         }
       };
+      
     </script>
   </head>
   
@@ -263,7 +264,7 @@
                     }
                   }
                 </script>
-
+                                
                 <div class="pt-3 hidden" id="hiddenDiv">
                   {% if current_professor != 0 and scheduleMode == 1 %}
                   <div class="row">
@@ -302,7 +303,6 @@
                       </div>
                     </div>
                   </div>
-
                   <!-- added dropbox for course duration-->
                   <div class="form-floating mb-3">
                     <select class="form-select" name="courseDuration" id="courseDuration">
