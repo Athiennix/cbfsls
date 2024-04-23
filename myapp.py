@@ -9,6 +9,7 @@ import pypyodbc as odbc
 import process_excel as pe
 import alert_files.admin_alert as admin_alert
 import alert_files.user_alert as user_alert
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -77,12 +78,6 @@ def index():
         return redirect(url_for("login")) # IF: Not logged in, redirect to login page
     
     else:
-        course_duration = None
-        if request.method == 'POST':
-            course_duration = request.form.get('course-duration')
-
-            # Do something with the selected course duration
-            print("Selected course duration:", course_duration)
         
         currentId = int(session['userId'])
         getProfessorsQuery = "SELECT employeeId, employeeName, employeeSchedule FROM Professors WHERE employeeId != 0000"
@@ -132,6 +127,7 @@ def admin():
 
         getRoomsQuery = "SELECT * FROM Rooms"
         roomData = executeQuery(getRoomsQuery)
+        
 
         for prof in professorData:
             print(prof[1])
@@ -198,6 +194,7 @@ def admin():
                 newEndTime = request.form['endingTime']
                 newDayOfWeek = request.form['dayOfWeek']
                 newRoom = request.form['courseRoom'].upper()
+                courseDuration = float(request.form['courseDuration'].upper())
 
                 if newRoom == "":
                     newRoom = "Virtual"
@@ -235,13 +232,98 @@ def admin():
                 if newDayOfWeek in genEdImplicitDays and currentType == 'GenEd':
                     print("ERROR: You cannot schedule GenEd classes on these specific days. Try again.")
                 else:
-                    if newDayOfWeek == "Monday" or newDayOfWeek == "Thursday":
-                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{newStartTime}', '{newEndTime}'), "
-                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{newStartTime}', '{newEndTime}')"
-                    elif newDayOfWeek == "Tuesday" or newDayOfWeek == "Friday":
-                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{newStartTime}', '{newEndTime}'), "
-                        insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{newStartTime}', '{newEndTime}')"
+                    if courseDuration != 3:  # Check if courseDuration is not 3
+                        if newDayOfWeek == "Monday" or newDayOfWeek == "Thursday":
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{newStartTime}', '{newEndTime}'), "
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{newStartTime}', '{newEndTime}')"
+                        elif newDayOfWeek == "Tuesday" or newDayOfWeek == "Friday":
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{newStartTime}', '{newEndTime}'), "
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{newStartTime}', '{newEndTime}')"
+                        elif newDayOfWeek == "Wednesday" or newDayOfWeek == "Saturday":
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{newStartTime}', '{newEndTime}'), "
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{newStartTime}', '{newEndTime}')"
 
+                    if courseDuration == 3:
+                        if newDayOfWeek == "Monday":
+                            # Define the initial times
+                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+                            # Calculate the middle time
+                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                            middle_time_str = middle_time.strftime("%I:%M %p")
+                            # Print the divided times
+                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                        elif newDayOfWeek == "Tuesday":
+                                # Define the initial times
+                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+                                    # Calculate the middle time
+                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                            middle_time_str = middle_time.strftime("%I:%M %p")
+                                        # Print the divided times
+                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                        elif newDayOfWeek == "Wednesday":
+                                # Define the initial times
+                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+                                    # Calculate the middle time
+                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                            middle_time_str = middle_time.strftime("%I:%M %p")
+                                        # Print the divided times
+                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                        elif newDayOfWeek == "Thursday":
+                                # Define the initial times
+                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+                                    # Calculate the middle time
+                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                            middle_time_str = middle_time.strftime("%I:%M %p")
+                                        # Print the divided times
+                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                        elif newDayOfWeek == "Friday":
+                                # Define the initial times
+                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+                                    # Calculate the middle time
+                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                            middle_time_str = middle_time.strftime("%I:%M %p")
+                                        # Print the divided times
+                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                        elif newDayOfWeek == "Saturday":
+                                # Define the initial times
+                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+                                    # Calculate the middle time
+                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                            middle_time_str = middle_time.strftime("%I:%M %p")
+                                        # Print the divided times
+                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                        
+                    
                     print(insertScheduleQuery)
 
                     checkExceedsHours = f"""
