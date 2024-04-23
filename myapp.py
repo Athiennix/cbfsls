@@ -11,6 +11,8 @@ import alert_files.admin_alert as admin_alert
 import alert_files.user_alert as user_alert
 import re
 from datetime import datetime, timedelta
+from process_excel import readContents # for displaying the courses in the main screen
+from flask import request
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -41,6 +43,7 @@ def login():
             if currentEmployeeId != 0000 and currentPassword != 'admin':
                 session["userId"] = currentEmployeeId
                 return redirect(url_for('index'))
+                
             else:
                 # IF: User is 'admin': proceed to Admin Portal
                 session['userId'] = '0000'
@@ -495,7 +498,7 @@ def admin():
                 roomData = executeQuery(getRoomsQuery)
                 current_professor = int(current_professor)
                 scheduleMode = scheduleMode
-
+                
             if action == "deleteUser":
                 professorName = ""
                 current_professor = request.form['hiddenProfessorDetails']
@@ -569,7 +572,7 @@ def admin():
             if action == "uploadExcel":
                 if 'file' not in request.files:
                         return '<script>alert("File not found.");</script>'
-                
+                    
                 file = request.files['file']
                 if file.filename == '':
                         return "No selected file."
@@ -589,7 +592,9 @@ def admin():
                 scheduleData=scheduleData,
                 roomData=roomData,
                 current_professor=int(current_professor),
-                scheduleMode=scheduleMode)
+                scheduleMode=scheduleMode,
+                course_offerings=courseData)  # Pass course data to the template as course_offerings
+                
 
 # CODE BLOCK: User Inquiries
 @app.route('/admin/inquiries', methods=['GET', 'POST'])

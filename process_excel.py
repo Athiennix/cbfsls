@@ -11,10 +11,11 @@ def readContents(name):
     for index, row in unique_values.iterrows():
         if (type(row['COURSE CODE']) == float 
         and type(row['DESCRIPTION']) == float
+        and type(row['YEAR LEVEL']) == float
         and type(row['UNITS']) == float):
             continue
 
-        data.append((row['COURSE CODE'], row['DESCRIPTION'], "", int(row['UNITS'])))
+        data.append((row['COURSE CODE'], row['DESCRIPTION'], row['YEAR LEVEL'], int(row['UNITS'])))
 
     ctr = 0
 

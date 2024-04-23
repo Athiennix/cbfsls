@@ -214,8 +214,8 @@
         <div class="container" id="contentContainer">
           <div class="row gx-3">
             <div class="col-4">
-              <h3 class="text-center pb-3">Load Professor</h3>
               <div class="bg-primary-subtle p-4 rounded-4">
+                <h3 class="text-center pb-3">Load Professor</h3>
                 <div class="form-floating">
                   {% if scheduleMode == 0 %}
                   <select id="profDetails" class="form-select" name="professorDetails" style="height: 70px" onchange="checkProfessorSelection()">
@@ -1011,7 +1011,30 @@
                   </div>
                   {% else %}
                   <div class="alert alert-info border-3 text-center">
-                    DISPLAY COURSE OFFERINGS HERE WITH THE UNITS AND EVERYTHING
+                    <h3>CBFS COURSE OFFERINGS</h3>
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Course Code</th>
+                          <th scope="col">Course Name</th>
+                          <th scope="col">Year Level</th>
+                          <th scope="col">Units</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for course in course_offerings %}
+                        <tr>
+                          <td>{{ course[0] }}</td>
+                          <td>{{ course[1] }}</td>
+                          <td>{{ course[2] }}</td>
+                          <td>{{ course[3] }}</td>
+                          </form>                        
+                          </td>
+                          </td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
                   </div>
                   {% endfor %}
 
@@ -1024,7 +1047,7 @@
                   >
                     <div class="row">
                       <div class="col d-flex justify-content-start">
-                        <h5 class="py-2">Course Offerings</h5>
+                        <h5 class="py-2">Manage Courses</h5>
                       </div>
                     </div>
 
@@ -1040,17 +1063,17 @@
                           data-bs-toggle="modal"
                           data-bs-target="#chooseAddMode"
                         >
-                          Add New Course
+                          Add New Courses
                         </button>
                       </div>
                       <div class="col-2 py-4">
-                        <button
+                        <!--<button
                           type="button"
                           class="btn btn-secondary"
                           data-bs-toggle="modal"
                           data-bs-target="#manageRooms"
                         >
-                          Manage Rooms
+                          Manage Rooms-->
                         </button>
                       </div>
                       <div class="col-2 py-4">
@@ -1060,7 +1083,7 @@
                           data-bs-toggle="modal"
                           data-bs-target="#manageExistingCourses"
                         >
-                          Delete A Course
+                          Delete Courses
                         </button>
                       </div>
                       
@@ -1407,7 +1430,7 @@
   <div class="modal-dialog modal-dialog-centered modal-lg"> 
     <div class="modal-content">
       <div class="modal-header">
-        <h1 class="modal-title fs-5" id="exampleModalLabel">Delete Course</h1>
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Delete Courses</h1>
       </div>
       <!-- v Set the height and added a scrollbar v -->
       <div class="modal-body" style="max-height: 400px; overflow-y: auto;"> 
@@ -1430,7 +1453,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         <button type="button" name="btn" class="btn btn-danger" data-bs-target="#deleteCoursesModal" data-bs-toggle="modal">
-          Delete Course
+          Delete Courses
         </button>
       </div>
     </div>
@@ -1603,7 +1626,7 @@
         <h3>Faculty Concerns Tab</h3>
         <hr>
         <button type="submit" name="btn" value="inquiries" formnovalidate class="btn btn-primary text-center pt-2">
-          <h5>See Requests</h5>
+          <h5>See Concerns</h5>
         </button>
       </div>
 
