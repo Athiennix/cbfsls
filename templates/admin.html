@@ -358,16 +358,17 @@
 
                   <div class="row">
                     <div class="col-6 mb-3">
+                      <div class="form-floating">
                         <div class="form-floating">
-                            <select class="form-select" required name="roomType" id="roomChoice" onchange="specifyRoom()">
-                                <option value="F2F" selected>Face-To-Face</option>
-                                <option value="Virtual">Virtual</option>
-                            </select>
-                            <label for="floatingPassword">Room Type</label>
+                          <select class="form-select" required name="roomType" id="roomChoice" onchange="specifyRoom()">
+                            <option default></option>
+                            <option value="F2F">Face-To-Face</option>
+                            <option value="Virtual">Virtual</option>
+                          </select>
+                          <label for="floatingPassword">Room Type</label>
                         </div>
+                      </div>
                     </div>
-                </div>
-                
                     <div class="col-6 mb-3">
                       <div class="form-floating">
                         <select class="form-select" required name="dayOfWeek">
