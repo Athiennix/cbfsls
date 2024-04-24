@@ -258,7 +258,7 @@ def admin():
                         if newDayOfWeek in genEdImplicitDays and currentType == 'GenEd':
                             print("ERROR: You cannot schedule GenEd classes on these specific days. Try again.")
                         else:
-                            if courseDuration != 3:  # bypass if courseDuration is not 3
+                            if courseDuration == 1.5:  # bypass if courseDuration is not 3
                                 if newDayOfWeek == "Monday" or newDayOfWeek == "Thursday":
                                     insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{newStartTime}', '{newEndTime}'), "
                                     insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{newStartTime}', '{newEndTime}')"
@@ -271,7 +271,7 @@ def admin():
                             
                         if courseDuration == 3:
                                 if newDayOfWeek == "Monday":
-                                # Define the initial times
+                                    # Define the initial times
                                     start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
                                     end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
                                     # Calculate the middle time
@@ -348,9 +348,8 @@ def admin():
                                     print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
                                     insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
                                     insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
-
                           
-                        print(insertScheduleQuery)
+                print(insertScheduleQuery)
 
 
                 checkExceedsHours = f"""

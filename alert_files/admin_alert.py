@@ -4,6 +4,9 @@ def invalid_course_exists(subject):
 def invalid_existing_course_timeslot(subject):
     return '<script>alert("ERROR: Course Code: [' + subject + '] is being scheduled at a timeframe that has an existing schedule. ");window.location.href="/admin";</script>'
 
+def invalid_overlap_course_timeslot(subject):
+    return '<script>alert("ERROR: Course Code: [' + subject + '] is overlapping with a timeframe that has an existing schedule. ");window.location.href="/admin";</script>'
+
 def invalid_existing_course_assignment(subject):
     return '<script>alert("ERROR: [' + subject + '] is already assigned to the same section. ");window.location.href="/admin";</script>'
 

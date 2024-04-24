@@ -96,6 +96,12 @@
         scheduleDay = clickedButton.value;
         console.log(scheduleDay)
       }
+      document.addEventListener('keydown', function(event) {
+    if (event.ctrlKey || event.altKey) {
+        event.preventDefault(); // Prevent default action
+        alert("This key is disabled.");
+      }
+      });
     </script>
   </head>
 
