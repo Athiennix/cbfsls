@@ -13,6 +13,7 @@ import re
 from datetime import datetime, timedelta
 from process_excel import readContents # for displaying the courses in the main screen
 from flask import request
+import file_test as ft
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -234,10 +235,10 @@ def admin():
 
                     # Check if the course is not already assigned to the new section
                     if not any(course[0] == current_course and course[5] == newCourseSection for course in courseData):
-                        # Proceed with reassignment
+                        # Proceed with re-assignment
                         insertScheduleQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES "
                         updateCourseQuery = f"UPDATE Courses SET professorId = {current_professor} WHERE courseId = '{current_course}'"
-                        checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE courseId = '{current_course}' and startTime = '{newStartTime}' AND endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}'"
+                        checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE startTime >= '{newStartTime}' AND endTime <= '{newEndTime}' AND dayOfWeek = '{newDayOfWeek}'"
                         checkCourseType = f"SELECT courseType FROM Courses WHERE courseId = '{current_course}'"
                         checkIfSameRoom = f"SELECT * FROM CourseSchedules WHERE startTime = '{newStartTime}' and endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}' and room = '{newRoom}'"
                         sameRoom = executeQuery(checkIfSameRoom)
@@ -582,6 +583,9 @@ def admin():
 
             if action == "inquiries":
                 return redirect(url_for('inquiries'))
+
+            if action == "test":
+                return ft.text()
             
         return render_template('admin.html',
                 professorData=professorData,

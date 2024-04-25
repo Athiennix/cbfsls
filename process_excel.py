@@ -12,7 +12,8 @@ def readContents(name):
         if (type(row['COURSE CODE']) == float 
         and type(row['COURSE NAME']) == float
         and type(row['YEAR LEVEL']) == float
-        and type(row['UNITS']) == float):
+        and type(row['UNITS']) == float
+        and type(row['COURSE TYPE']) == float):
             continue
 
         data.append((row['COURSE CODE'], row['COURSE NAME'], row['YEAR LEVEL'], int(row['UNITS'])))
