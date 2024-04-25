@@ -670,5 +670,4 @@ def executeQuery(checkQuery, params=None):
     return data
 
 if __name__ == '__main__':
-    print(sys.path)
     app.run(debug=True)
