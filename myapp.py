@@ -1,7 +1,7 @@
 # USERNAME: umakscheduler
 # PASSWORD: Adminschedule123
 
-from flask import Flask, render_template, redirect, request, session, url_for
+from flask import Flask, render_template, redirect, request, session, url_for, flash
 from flask_session import Session
 from werkzeug.utils import secure_filename
 import os
@@ -9,7 +9,10 @@ import pypyodbc as odbc
 import process_excel as pe
 import alert_files.admin_alert as admin_alert
 import alert_files.user_alert as user_alert
+import re
 from datetime import datetime, timedelta
+from process_excel import readContents # for displaying the courses in the main screen
+from flask import request
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -40,6 +43,7 @@ def login():
             if currentEmployeeId != 0000 and currentPassword != 'admin':
                 session["userId"] = currentEmployeeId
                 return redirect(url_for('index'))
+                
             else:
                 # IF: User is 'admin': proceed to Admin Portal
                 session['userId'] = '0000'
@@ -55,6 +59,13 @@ def register():
         new_EmployeeId = request.form['employeeId']
         new_EmployeeName = request.form['employeeName']
         new_EmployeePassword = request.form['password']
+
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_EmployeePassword) \
+            or not re.search(r'\d', new_EmployeePassword) \
+            or not re.search(r'[A-Z]', new_EmployeePassword):
+            
+            flash("Password must contain at least one special character, one number, and one uppercase letter.")
+            return redirect(url_for('register'))  # Redirect back to the registration page
 
         checkQuery = f"SELECT * FROM Professors WHERE employeeId = {new_EmployeeId}"
         insertQuery = f"INSERT INTO Professors (employeeId, employeeName, employeePassword, employeeSchedule) VALUES ({new_EmployeeId}, '{new_EmployeeName}', '{new_EmployeePassword}', 'Incomplete')"
@@ -78,6 +89,12 @@ def index():
         return redirect(url_for("login")) # IF: Not logged in, redirect to login page
     
     else:
+        course_duration = None
+        if request.method == 'POST':
+            course_duration = request.form.get('course-duration')
+
+            # Do something with the selected course duration
+            print("Selected course duration:", course_duration)
         
         currentId = int(session['userId'])
         getProfessorsQuery = "SELECT employeeId, employeeName, employeeSchedule FROM Professors WHERE employeeId != 0000"
@@ -102,12 +119,13 @@ def index():
                 insertInquiryQuery = f"INSERT INTO ProfessorInquiries (professorId, inqSubject, inqMessage, inqStatus) VALUES ({currentId}, '{inquirySubject}', '{inquiryMessage}', 'Unresolved')"
                 executeQuery(insertInquiryQuery)
                 return user_alert.success_submit_inquiry()
-
+            
         return render_template("index.html",
         current_professor=currentId,
         professorData=professorData,
         courseData=courseData,
         scheduleData=scheduleData)
+
 
 # CODE BLOCK: Admin Page
 @app.route('/admin', methods=['GET', 'POST'])
@@ -128,7 +146,6 @@ def admin():
         getRoomsQuery = "SELECT * FROM Rooms"
         roomData = executeQuery(getRoomsQuery)
         
-
         for prof in professorData:
             print(prof[1])
 
@@ -194,7 +211,7 @@ def admin():
                 newEndTime = request.form['endingTime']
                 newDayOfWeek = request.form['dayOfWeek']
                 newRoom = request.form['courseRoom'].upper()
-                courseDuration = float(request.form['courseDuration'].upper())
+                courseDuration = float(request.form['courseDuration'])
 
                 if newRoom == "":
                     newRoom = "Virtual"
@@ -212,195 +229,201 @@ def admin():
                         ifNoProfessorExists = True
                         break
 
-                insertScheduleQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES "
-                updateCourseQuery = f"UPDATE Courses SET professorId = {current_professor} WHERE courseId = '{current_course}'"
-                checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE courseId = '{current_course}' and startTime = '{newStartTime}' AND endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}'"
-                checkCourseType = f"SELECT courseType FROM Courses WHERE courseId = '{current_course}'"
-                checkIfSameRoom = f"SELECT * FROM CourseSchedules WHERE startTime = '{newStartTime}' and endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}' and room = '{newRoom}'"
-                sameRoom = executeQuery(checkIfSameRoom)
+                # Retrieve current_course_section from courseData
+                current_course_section = next((course[5] for course in courseData if course[0] == current_course), None)
 
-                getCourseType = executeQuery(checkCourseType)
-                for types in getCourseType:
-                    currentType = types[0]
-                
-                if currentType == 'Major':
-                    maxHours = 3
-                else:
-                    maxHours = 1.5
+                # Check if the new section is different from the current section
+                if newCourseSection != current_course_section:
 
-                if newDayOfWeek in genEdImplicitDays and currentType == 'GenEd':
-                    print("ERROR: You cannot schedule GenEd classes on these specific days. Try again.")
-                else:
-                    if courseDuration != 3:  # Check if courseDuration is not 3
-                        if newDayOfWeek == "Monday" or newDayOfWeek == "Thursday":
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{newStartTime}', '{newEndTime}'), "
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{newStartTime}', '{newEndTime}')"
-                        elif newDayOfWeek == "Tuesday" or newDayOfWeek == "Friday":
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{newStartTime}', '{newEndTime}'), "
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{newStartTime}', '{newEndTime}')"
-                        elif newDayOfWeek == "Wednesday" or newDayOfWeek == "Saturday":
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{newStartTime}', '{newEndTime}'), "
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{newStartTime}', '{newEndTime}')"
+                    # Check if the course is not already assigned to the new section
+                    if not any(course[0] == current_course and course[5] == newCourseSection for course in courseData):
+                        # Proceed with reassignment
+                        insertScheduleQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES "
+                        updateCourseQuery = f"UPDATE Courses SET professorId = {current_professor} WHERE courseId = '{current_course}'"
+                        checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE courseId = '{current_course}' and startTime = '{newStartTime}' AND endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}'"
+                        checkCourseType = f"SELECT courseType FROM Courses WHERE courseId = '{current_course}'"
+                        checkIfSameRoom = f"SELECT * FROM CourseSchedules WHERE startTime = '{newStartTime}' and endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}' and room = '{newRoom}'"
+                        sameRoom = executeQuery(checkIfSameRoom)
 
-                    if courseDuration == 3:
-                        if newDayOfWeek == "Monday":
-                            # Define the initial times
-                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
-                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
-                            # Calculate the middle time
-                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
-                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
-                            middle_time_str = middle_time.strftime("%I:%M %p")
-                            # Print the divided times
-                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
-                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
-                        elif newDayOfWeek == "Tuesday":
-                                # Define the initial times
-                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
-                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
-                                    # Calculate the middle time
-                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
-                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
-                            middle_time_str = middle_time.strftime("%I:%M %p")
-                                        # Print the divided times
-                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
-                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
-                        elif newDayOfWeek == "Wednesday":
-                                # Define the initial times
-                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
-                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
-                                    # Calculate the middle time
-                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
-                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
-                            middle_time_str = middle_time.strftime("%I:%M %p")
-                                        # Print the divided times
-                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
-                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
-                        elif newDayOfWeek == "Thursday":
-                                # Define the initial times
-                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
-                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
-                                    # Calculate the middle time
-                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
-                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
-                            middle_time_str = middle_time.strftime("%I:%M %p")
-                                        # Print the divided times
-                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
-                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
-                        elif newDayOfWeek == "Friday":
-                                # Define the initial times
-                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
-                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
-                                    # Calculate the middle time
-                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
-                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
-                            middle_time_str = middle_time.strftime("%I:%M %p")
-                                        # Print the divided times
-                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
-                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
-                        elif newDayOfWeek == "Saturday":
-                                # Define the initial times
-                            start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
-                            end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
-                                    # Calculate the middle time
-                            middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
-                            middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
-                            middle_time_str = middle_time.strftime("%I:%M %p")
-                                        # Print the divided times
-                            print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
-                            print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
-                            insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
-                        
-                    
-                    print(insertScheduleQuery)
+                        getCourseType = executeQuery(checkCourseType)
+                        for types in getCourseType:
+                            currentType = types[0]
 
-                    checkExceedsHours = f"""
-                                            SELECT cs.professorId, 
-                                                SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) AS totalScheduledHours
-                                            FROM CourseSchedules cs
-                                            JOIN Courses c ON cs.courseId = c.courseId
-                                            WHERE cs.professorId = {current_professor}
-                                            AND cs.courseId = '{current_course}'
-                                            AND c.courseType = '{currentType}'
-                                            GROUP BY cs.professorId
-                                            HAVING SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) >= {maxHours};
-                                            """
-                                
-                        # Check if there are existing schedules for the professor and course
-                    if scheduleData:
-                        # If there is a professor assigned to the course
-                        if ifProfessorExists:
-                            if sameRoom:
-                                return admin_alert.invalid_existing_room(sameRoom)
-                            else:
-                                if executeQuery(checkIfSameTime):
-                                    return admin_alert.invalid_existing_course_timeslot(current_course)
-                                else:
-                                    if executeQuery(checkExceedsHours):
-                                        # Check if the course is being assigned to a different section for the same professor
-                                        existing_course_section_query = f"SELECT section FROM CourseSchedules WHERE courseId = '{current_course}' AND professorId = {current_professor}"
-                                        existing_course_section = executeQuery(existing_course_section_query)
-                                        if existing_course_section and newCourseSection not in [section[0] for section in existing_course_section]:
-                                            # Different section for the same professor
-                                            executeQuery(insertScheduleQuery)
-                                            professorData = executeQuery(getProfessorsQuery)
-                                            courseData = executeQuery(getCoursesQuery)
-                                            scheduleData = executeQuery(getCourseSchedulesQuery)
-                                            roomData = executeQuery(getRoomsQuery)
-                                            current_professor = int(current_professor)
-                                            scheduleMode = scheduleMode
-                                        else:
-                                            print("ERROR: Course is already assigned to the same section or professor.")
-                                    else:
-                                        executeQuery(insertScheduleQuery)
-                                        professorData = executeQuery(getProfessorsQuery)
-                                        courseData = executeQuery(getCoursesQuery)
-                                        scheduleData = executeQuery(getCourseSchedulesQuery)
-                                        roomData = executeQuery(getRoomsQuery)
-                                        current_professor = int(current_professor)
-                                        scheduleMode = scheduleMode
+                        print(currentType)
+                        if currentType == 'Major':
+                            maxHours = 3
                         else:
-                            # No professor assigned to the course
-                            if sameRoom:
-                                return admin_alert.invalid_existing_room(sameRoom)
-                            else:
-                                if executeQuery(checkIfSameTime):
-                                    return admin_alert.invalid_existing_course_timeslot(current_course)
+                            maxHours = 1.5
+
+                        if newDayOfWeek in genEdImplicitDays and currentType == 'GenEd':
+                            print("ERROR: You cannot schedule GenEd classes on these specific days. Try again.")
+                        else:
+                            if courseDuration == 1.5:  # bypass if courseDuration is not 3
+                                if newDayOfWeek == "Monday" or newDayOfWeek == "Thursday":
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{newStartTime}', '{newEndTime}'), "
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{newStartTime}', '{newEndTime}')"
+                                elif newDayOfWeek == "Tuesday" or newDayOfWeek == "Friday":
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{newStartTime}', '{newEndTime}'), "
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{newStartTime}', '{newEndTime}')"
+                                elif newDayOfWeek == "Wednesday" or newDayOfWeek == "Saturday":
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{newStartTime}', '{newEndTime}'), "
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{newStartTime}', '{newEndTime}')"
+                            
+                        if courseDuration == 3:
+                                if newDayOfWeek == "Monday":
+                                    # Define the initial times
+                                    start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                                    end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+                                    # Calculate the middle time
+                                    middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                                    middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                                    middle_time_str = middle_time.strftime("%I:%M %p")
+                                        # Print the divided times
+                                    print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                                    print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Monday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                                
+                                elif newDayOfWeek == "Tuesday":
+                                    start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                                    end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+
+                                    middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                                    middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                                    middle_time_str = middle_time.strftime("%I:%M %p")
+
+                                    print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                                    print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Tuesday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                                
+                                elif newDayOfWeek == "Wednesday":
+                                    start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                                    end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+
+                                    middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                                    middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                                    middle_time_str = middle_time.strftime("%I:%M %p")
+
+                                    print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                                    print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Wednesday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                                
+                                elif newDayOfWeek == "Thursday":
+                                    start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                                    end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+
+                                    middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                                    middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                                    middle_time_str = middle_time.strftime("%I:%M %p")
+
+                                    print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                                    print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Thursday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                                
+                                elif newDayOfWeek == "Friday":
+                                    start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                                    end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+                    
+                                    middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                                    middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                                    middle_time_str = middle_time.strftime("%I:%M %p")
+        
+                                    print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                                    print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Friday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+
+                                elif newDayOfWeek == "Saturday":
+                                    start_time = datetime.strptime(newStartTime, "%H:%M:%S").time()
+                                    end_time = datetime.strptime(newEndTime, "%H:%M:%S").time()
+        
+                                    middle_seconds = (datetime.combine(datetime.today(), end_time) - datetime.combine(datetime.today(), start_time)).total_seconds() / 2
+                                    middle_time = (datetime.combine(datetime.today(), start_time) + timedelta(seconds=middle_seconds)).time()
+                                    middle_time_str = middle_time.strftime("%I:%M %p")
+            
+                                    print(f"{start_time.strftime('%I:%M %p')} - {middle_time_str}")
+                                    print(f"{middle_time_str} - {end_time.strftime('%I:%M %p')}")
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
+                                    insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
+                          
+                print(insertScheduleQuery)
+
+
+                checkExceedsHours = f"""
+                                        SELECT cs.professorId, 
+                                            SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) AS totalScheduledHours
+                                        FROM CourseSchedules cs
+                                        JOIN Courses c ON cs.courseId = c.courseId
+                                        WHERE cs.professorId = {current_professor}
+                                        AND cs.courseId = '{current_course}'
+                                        AND c.courseType = '{currentType}'
+                                        GROUP BY cs.professorId
+                                        HAVING SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) >= {maxHours};
+                                        """
+                                        
+                # Check if there are existing schedules for the professor and course
+                if scheduleData:
+                    # If there is a professor assigned to the course
+                    if ifProfessorExists:
+                        if executeQuery(checkIfSameTime):
+                            return admin_alert.invalid_existing_course_timeslot(current_course)
+                        elif sameRoom:
+                            return admin_alert.invalid_existing_room(sameRoom)
+                        else:
+                            if executeQuery(checkExceedsHours):
+                                # Check if the course is being assigned to a different section for the same professor
+                                existing_course_section_query = f"SELECT section FROM CourseSchedules WHERE courseId = '{current_course}' AND professorId = {current_professor}"
+                                existing_course_section = executeQuery(existing_course_section_query)
+                                if existing_course_section and newCourseSection not in [section[0] for section in existing_course_section]:
+                                    # Different section for the same professor
+                                    executeQuery(insertScheduleQuery)
+                                    professorData = executeQuery(getProfessorsQuery)
+                                    courseData = executeQuery(getCoursesQuery)
+                                    scheduleData = executeQuery(getCourseSchedulesQuery)
+                                    roomData = executeQuery(getRoomsQuery)
+                                    current_professor = int(current_professor)
+                                    scheduleMode = scheduleMode
                                 else:
-                                    if executeQuery(checkExceedsHours):
-                                        return admin_alert.invalid_maximum_timeslot(current_course, currentType)
-                                    else:
-                                        # No issues found, proceed with inserting the schedule
-                                        executeQuery(insertScheduleQuery)
-                                        executeQuery(updateCourseQuery)  # Update course information
-                                        # Update necessary data for UI refresh
-                                        professorData = executeQuery(getProfessorsQuery)
-                                        courseData = executeQuery(getCoursesQuery)
-                                        scheduleData = executeQuery(getCourseSchedulesQuery)
-                                        roomData = executeQuery(getRoomsQuery)
-                                        current_professor = int(current_professor)
-                                        scheduleMode = scheduleMode
-                    else:  # If no records exist, insert new schedule into the table
-                        executeQuery(insertScheduleQuery)
-                        executeQuery(updateCourseQuery)  # Update course information
-                        # Update necessary data for UI refresh
-                        professorData = executeQuery(getProfessorsQuery)
-                        courseData = executeQuery(getCoursesQuery)
-                        scheduleData = executeQuery(getCourseSchedulesQuery)
-                        roomData = executeQuery(getRoomsQuery)
-                        current_professor = int(current_professor)
-                        scheduleMode = scheduleMode
+                                    return admin_alert.invalid_existing_course_assignment(current_course)
+                            else:
+                                executeQuery(insertScheduleQuery)
+                                professorData = executeQuery(getProfessorsQuery)
+                                courseData = executeQuery(getCoursesQuery)
+                                scheduleData = executeQuery(getCourseSchedulesQuery)
+                                roomData = executeQuery(getRoomsQuery)
+                                current_professor = int(current_professor)
+                                scheduleMode = scheduleMode
+                    else:
+                        # No professor assigned to the course
+                        if sameRoom:
+                            return admin_alert.invalid_existing_room(sameRoom)
+                        else:
+                            if executeQuery(checkExceedsHours):
+                                return admin_alert.invalid_maximum_timeslot(current_course, currentType)
+                            else:
+                                # No issues found, proceed with inserting the schedule
+                                executeQuery(insertScheduleQuery)
+                                executeQuery(updateCourseQuery)  # Update course information
+                                # Update necessary data for UI refresh
+                                professorData = executeQuery(getProfessorsQuery)
+                                courseData = executeQuery(getCoursesQuery)
+                                scheduleData = executeQuery(getCourseSchedulesQuery)
+                                roomData = executeQuery(getRoomsQuery)
+                                current_professor = int(current_professor)
+                                scheduleMode = scheduleMode
+                else:  # If no records exist, insert new schedule into the table
+                    executeQuery(insertScheduleQuery)
+                    executeQuery(updateCourseQuery)  # Update course information
+                    # Update necessary data for UI refresh
+                    professorData = executeQuery(getProfessorsQuery)
+                    courseData = executeQuery(getCoursesQuery)
+                    scheduleData = executeQuery(getCourseSchedulesQuery)
+                    roomData = executeQuery(getRoomsQuery)
+                    current_professor = int(current_professor)
+                    scheduleMode = scheduleMode
 
             if action == 'insertHonorariumVacant':
                 scheduleMode = 2
@@ -474,7 +497,7 @@ def admin():
                 roomData = executeQuery(getRoomsQuery)
                 current_professor = int(current_professor)
                 scheduleMode = scheduleMode
-
+                
             if action == "deleteUser":
                 professorName = ""
                 current_professor = request.form['hiddenProfessorDetails']
@@ -544,31 +567,33 @@ def admin():
                     roomData=roomData, 
                     current_professor=int(current_professor),
                     scheduleMode=1)
-
-
+            
             if action == "uploadExcel":
                 if 'file' not in request.files:
-                    return '<script>alert("File not found.");</script>'
-                
+                        return '<script>alert("File not found.");</script>'
+                    
                 file = request.files['file']
                 if file.filename == '':
-                    return "No selected file."
+                        return "No selected file."
                 if file and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    executeQuery(pe.readContents(filename))
-                    return admin_alert.success_subject_import()
+                        filename = secure_filename(file.filename)
+                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                        executeQuery(pe.readContents(filename))
+                        return admin_alert.success_subject_import()
+            
 
             if action == "inquiries":
                 return redirect(url_for('inquiries'))
-
+            
         return render_template('admin.html',
                 professorData=professorData,
                 courseData=courseData,
                 scheduleData=scheduleData,
                 roomData=roomData,
                 current_professor=int(current_professor),
-                scheduleMode=scheduleMode)
+                scheduleMode=scheduleMode,
+                course_offerings=courseData)  # Pass course data to the template as course_offerings
+                
 
 # CODE BLOCK: User Inquiries
 @app.route('/admin/inquiries', methods=['GET', 'POST'])
