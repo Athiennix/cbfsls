@@ -90,12 +90,6 @@ def index():
     
     else:
         course_duration = None
-        if request.method == 'POST':
-            course_duration = request.form.get('course-duration')
-
-            # Do something with the selected course duration
-            print("Selected course duration:", course_duration)
-        
         currentId = int(session['userId'])
         getProfessorsQuery = "SELECT employeeId, employeeName, employeeSchedule FROM Professors WHERE employeeId != 0000"
         professorData = executeQuery(getProfessorsQuery)
@@ -107,6 +101,9 @@ def index():
         scheduleData = executeQuery(getCourseSchedulesQuery)
 
         if request.method == 'POST':
+            # course_duration = request.form.get('course-duration')
+            # Do something with the selected course duration
+            # print("Selected course duration:", course_duration)
             action = request.form['btn']
 
             if action == 'logout':
