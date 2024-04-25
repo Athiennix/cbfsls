@@ -223,7 +223,6 @@ def admin():
                 for types in getCourseType:
                     currentType = types[0]
                 
-                print(currentType)
                 if currentType == 'Major':
                     maxHours = 3
                 else:
