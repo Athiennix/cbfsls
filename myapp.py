@@ -26,7 +26,7 @@ Session(app)
 
 server = 'umakscheduler.database.windows.net'
 database = 'SchedulerDB'
-connString = 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:'+server+',1433;Database='+database+';Uid=umakscheduler;Pwd=Adminschedule123;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;'
+connString = 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:cbfssysload.database.windows.net,1433;Database=cbfsloadsys;Uid=cbfsloadsys;Pwd=IAMJENZERKANE-:6ba1224;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;'
 
 @app.route('/')
 def home():
@@ -41,18 +41,16 @@ def login():
         query = f"SELECT * FROM Professors WHERE employeeId = {currentEmployeeId} AND employeePassword = '{currentPassword}'"
         result = executeQuery(query)
         
+        if currentEmployeeId == '0000' and currentPassword == 'admin':
+                # IF: User is 'admin': proceed to Admin Portal
+            session['userId'] = '0000'
+            return redirect(url_for('admin'))
+    
         if result:
             if currentEmployeeId != 0000 and currentPassword != 'admin':
                 session["userId"] = currentEmployeeId
                 return redirect(url_for('index'))
                 
-            else:
-                # IF: User is 'admin': proceed to Admin Portal
-                session['userId'] = '0000'
-                return redirect(url_for('admin'))
-        
-        return user_alert.invalid_login_credentials()
-
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -81,7 +79,7 @@ def register():
             executeQuery(insertQuery)
             executeQuery(insertHonorariumToken)
             executeQuery(insertVacantToken)
-            return user_alert.success_registration()
+            # return user_alert.success_registration()
  
     return render_template('register.html')
 
@@ -110,14 +108,14 @@ def index():
 
             if action == 'logout':
                 session.pop('userId', 0)
-                return user_alert.success_user_logout()
+                return redirect("/login")
 
             if action == 'submitInquiry':
                 inquirySubject = request.form['messageSubject']
                 inquiryMessage = request.form['message']
                 insertInquiryQuery = f"INSERT INTO ProfessorInquiries (professorId, inqSubject, inqMessage, inqStatus) VALUES ({currentId}, '{inquirySubject}', '{inquiryMessage}', 'Unresolved')"
                 executeQuery(insertInquiryQuery)
-                return user_alert.success_submit_inquiry()
+                # return user_alert.success_submit_inquiry()
             
         return render_template("index.html",
         current_professor=currentId,
@@ -608,6 +606,7 @@ def inquiries():
     else:
         getInquiriesQuery = "SELECT * FROM ProfessorInquiries"
         inquiryData = executeQuery(getInquiriesQuery)
+        print(inquiryData)
 
         getProfessorsQuery = "SELECT employeeId, employeeName, employeeSchedule FROM Professors WHERE employeeId != 0000"
         professorData = executeQuery(getProfessorsQuery)
