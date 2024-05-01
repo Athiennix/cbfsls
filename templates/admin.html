@@ -54,9 +54,11 @@
       #scheduleTable td {
         vertical-align: middle;
       }
+      
 
     </style>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script>
       var scheduleMode = 0;
       
@@ -193,31 +195,37 @@
           window.location.replace("/login");
         }
         if (alertVariable == "COURSE_EXISTS") {
-          alert("ERROR: This course already exists in the system. Please try again.");
+          alert("ERROR: This course already exists in the system. Try again.");
         }
         if (alertVariable == "COURSE_ADD_SUCCESS") {
           alert("Course has been added successfully.")
         }
         if (alertVariable == "INVALID_ROOM") {
-          alert("ERROR: The room stated is already being used by another schedule. Please try again.")
+          alert("ERROR: The room stated is already being used by another schedule. Choose a different room and try again.")
+        }
+        if (alertVariable == "INVALID_SECTION_ROOM") {
+          alert("ERROR: Another schedule is already assigned to the specified section and room. Choose a different section or room and try again.")
+        }
+        if (alertVariable == "INVALID_TIMESLOT_OVERLAP") {
+          alert("ERROR: The selected timeframe is overlapping with an existing schedule. Choose a different timeframe and try again.")
         }
         if (alertVariable == "GEN_END_IMPLICIT_DAYS") {
-          alert("ERROR: You cannot schedule GenEd classes on these specific days. Please try again.")
+          alert("ERROR: You cannot schedule GenEd classes on these specific days. Try again.")
         }
         if (alertVariable == "COURSE_ALREADY_ASSIGNED") {
-          alert("ERROR: This course is already assigned to the same section or professor. Please try again.")
+          alert("ERROR: This course is already assigned to the same section or professor. Choose a different section or professor and try again.")
         }
         if (alertVariable == "INVALID_TIMESLOT") { 
-          alert("ERROR: This course is being scheduled at a timeframe that has an existing schedule. Please try again.");
+          alert("ERROR: This course is being scheduled at a timeframe that has an existing schedule. Choose a different timeframe and try again.");
         }
         if (alertVariable == "INVALID_MAXIMUM_HOURS_REACHED") {
-          alert("ERROR: This course has already reached its maximum hours for this section. Please try again.")
+          alert("ERROR: This course has already reached its maximum hours for this section. Choose a different course or section and try again.")
         }
         if (alertVariable == "INVALID_HONORVACANT_EXISTING_TIMESLOT") {
-          alert("ERROR: Honorarium/Vacant is being scheduled at a timeframe that has an existing schedule. Please try again.")
+          alert("ERROR: Honorarium/Vacant is being scheduled at a timeframe that has an existing schedule. Choose a different timeframe and try again.")
         }
         if (alertVariable == "INVALID_HONORVACANT_MAXIMUM_HOURS_REACHED") {
-          alert("ERROR: Honorarium/Vacant has already reached its maximum hours. Please try again. ")
+          alert("ERROR: Honorarium/Vacant has already reached its maximum hours for this professor.")
         }
         if (alertVariable == "COURSE_DELETE_SUCCESS") {
           alert('Selected courses have been deleted successfully.')
@@ -1259,7 +1267,8 @@
                       <td>-</td>
                       {% endfor %}
                   </tr>
-
+                  <!-- TABLE TOTAL HOURS COUNTER -->
+                  <!-- <div id="hoursCounter" style="float: right; font-weight: bold;">Total Hours: <span id="totalHours">0</span>/18</div> -->
                       </tbody>
                     </table>
                   </div>
@@ -1296,7 +1305,7 @@
                       </div>
                   </div>
                   {% endfor %}
-                  
+
                   <!-- ADMINISTRATIVE OPTIONS -->
                   <div
                     class="justify-content-center bg-light container py-3 px-4"
@@ -1325,25 +1334,16 @@
                           Add New Courses
                         </button>
                       </div>
-                      <div class="col-2 py-4">
+                    <div class="col-2 py-4">
                         <button
-                          type="button"
-                          class="btn btn-secondary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#manageRooms"
+                            type="button"
+                            class="btn btn-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#manageExistingCourses"
                         >
-                          Manage Rooms
-                      </div>
-                      <div class="col-2 py-4">
-                        <button
-                          type="button"
-                          class="btn btn-danger"
-                          data-bs-toggle="modal"
-                          data-bs-target="#manageExistingCourses"
-                        >
-                          Delete Courses
+                            Delete Courses
                         </button>
-                      </div>
+                    </div>
                       
                       {% for schedType in professorData if schedType[0] == current_professor %}
                         {% if schedType[2] == 'Incomplete' %}
@@ -1892,6 +1892,77 @@
       </div>
 
     </form>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+    <script>
+      // Update hour counter script
+      function updateCounter() {
+          // Get total hours for each professor
+          var professorHours = calculateProfessorHours();
+          
+          // Update the counters for each professor
+          for (var professor in professorHours) {
+              var totalHours = professorHours[professor];
+              var counter = document.getElementById(professor + 'Counter'); // Assuming the ID follows the pattern "<professor>Counter"
+              var maxHours = 18; // Maximum hours for each professor
+              
+              // Update the counter text
+              counter.textContent = 'Total Hours: ' + totalHours + '/' + maxHours;
+              
+              // Change color based on the total hours
+              if (totalHours > maxHours) {
+                  counter.style.color = 'red';
+              } else if (totalHours === maxHours) {
+                  counter.style.color = 'green';
+              } else {
+                  counter.style.color = ''; // Reset to default color
+              }
+          }
+      }
+    
+      // Calculate total hours for each professor
+      function calculateProfessorHours() {
+          var professorHours = {};
+          // Your logic to calculate total hours for each professor from the table
+          // For demonstration, let's assume there's a function called getProfessorScheduleData() that returns schedule data for each professor
+          var professorSchedules = getProfessorScheduleData();
+          
+          for (var professor in professorSchedules) {
+              var totalHours = 0;
+              professorSchedules[professor].forEach(function(schedule) {
+                  totalHours += schedule.duration; // Assuming each schedule object has a 'duration' property
+              });
+              professorHours[professor] = totalHours;
+          }
+          
+          return professorHours;
+      }
+    
+      // Example function to get schedule data for each professor from the table
+      function getProfessorScheduleData() {
+          // This is just a placeholder function, replace it with your actual logic
+          // For demonstration, let's assume you have an object where each key is a professor name and the value is an array of schedule objects
+          return {
+              'Professor A': [
+                  { startTime: '7:30 AM', endTime: '9:00 AM', duration: 1.5 },
+                  { startTime: '9:00 AM', endTime: '10:30 AM', duration: 1.5 },
+                  // Add more schedule objects for Professor A as needed
+              ],
+              'Professor B': [
+                  // Schedule objects for Professor B
+              ],
+              // Add more professors as needed
+          };
+      }
+    
+      // Call updateCounter whenever the schedule table is modified
+      // For demonstration, let's assume you're calling it whenever a schedule is added or removed
+      // You need to replace this with your actual logic
+      // For example, if you're using event listeners to detect changes to the table, call updateCounter() there
+      updateCounter();
+      
+    </script>
   </body>
 </html>
 {% endblock %}
