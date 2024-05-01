@@ -346,18 +346,20 @@ def admin():
                             insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{start_time.strftime('%I:%M %p')}', '{middle_time_str}'), "
                             insertScheduleQuery += f"('{current_course}', {current_professor}, '{newRoom}', '{newCourseSection}', 'Saturday', '{middle_time_str}', '{end_time.strftime('%I:%M %p')}')"
                         
+
                     checkExceedsHours = f"""
-                                            SELECT cs.professorId, 
+                                            SELECT cs.section, 
                                                 SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) AS totalScheduledHours
                                             FROM CourseSchedules cs
                                             JOIN Courses c ON cs.courseId = c.courseId
                                             WHERE cs.professorId = {current_professor}
-                                            AND cs.courseId = '{current_course}'
-                                            AND c.courseType = '{currentType}'
-                                            GROUP BY cs.professorId
+                                                AND cs.courseId = '{current_course}'
+                                                AND cs.section = '{newCourseSection}'  -- Include section in the condition
+                                                AND c.courseType = '{currentType}'
+                                            GROUP BY cs.section
                                             HAVING SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) >= {maxHours};
                                             """
-                                
+
                     # Check if there are existing schedules for the professor and course
                     if scheduleData:
                         # If there is a professor assigned to the course
@@ -368,7 +370,9 @@ def admin():
                                 if executeQuery(checkIfSameTime):
                                     alertType = "INVALID_TIMESLOT"
                                 else:
-                                    if executeQuery(checkExceedsHours):
+                                    # Check if the total scheduled hours exceed the maximum allowed for the specific section
+                                    exceedsMaxHours = executeQuery(checkExceedsHours)
+                                    if exceedsMaxHours:
                                         alertType = "INVALID_MAXIMUM_HOURS_REACHED"
                                     else:
                                         # Check if the course is being assigned to a different section for the same professor
@@ -377,6 +381,7 @@ def admin():
                                         if existing_course_section and newCourseSection not in [section[0] for section in existing_course_section]:
                                             # Different section for the same professor
                                             executeQuery(insertScheduleQuery)
+                                            # Refresh data for UI
                                             professorData = executeQuery(getProfessorsQuery)
                                             courseData = executeQuery(getCoursesQuery)
                                             scheduleData = executeQuery(getCourseSchedulesQuery)
@@ -394,12 +399,13 @@ def admin():
                                 if executeQuery(checkIfSameTime):
                                     alertType = "INVALID_TIMESLOT"
                                 else:
-                                    if executeQuery(checkExceedsHours):
+                                    # Check if the total scheduled hours exceed the maximum allowed for the specific section
+                                    exceedsMaxHours = executeQuery(checkExceedsHours)
+                                    if exceedsMaxHours:
                                         alertType = "INVALID_MAXIMUM_HOURS_REACHED"
                                     else:
                                         # No issues found, proceed with inserting the schedule
                                         executeQuery(insertScheduleQuery)
-                                        executeQuery(updateCourseQuery) 
                                         # Update necessary data for UI refresh
                                         professorData = executeQuery(getProfessorsQuery)
                                         courseData = executeQuery(getCoursesQuery)
@@ -408,10 +414,9 @@ def admin():
                                         current_professor = int(current_professor)
                                         scheduleMode = scheduleMode
                                         alertType = ""
-                    # If no records exist, insert new schedule into the table
                     else:
+                        # If no records exist, insert new schedule into the table
                         executeQuery(insertScheduleQuery)
-                        executeQuery(updateCourseQuery)
                         # Update necessary data for UI refresh
                         professorData = executeQuery(getProfessorsQuery)
                         courseData = executeQuery(getCoursesQuery)
@@ -420,64 +425,6 @@ def admin():
                         current_professor = int(current_professor)
                         scheduleMode = scheduleMode
                         alertType = ""
-
-            if action == 'insertHonorariumVacant':
-                scheduleMode = 2
-                current_professor = request.form['hiddenProfessorDetails']
-                otherScheduleType = request.form['honorVacantChoice']
-                honorVacantDayOfWeek = request.form['honorVacantDayOfWeek']
-                honorVacantStartTime = request.form['honorVacantStartTime']
-                honorVacantEndTime = request.form['honorVacantEndingTime']
-                
-                getHonorariumID = f"SELECT courseId FROM Courses where courseId = '{'HT' + current_professor}'"
-                getVacantID = f"SELECT courseId FROM Courses where courseId = '{'VT' + current_professor}'"
-                honorIDquery = executeQuery(getHonorariumID)
-                vacantIDquery = executeQuery(getVacantID)
-
-                if otherScheduleType == 'Honorarium Time':
-                    choiceID = honorIDquery[0][0]
-                
-                if otherScheduleType == 'Vacant Time':
-                    choiceID = vacantIDquery[0][0]
-
-                insertHonorVacantQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES ('{choiceID}', {current_professor}, '', '', '{honorVacantDayOfWeek}', '{honorVacantStartTime}', '{honorVacantEndTime}')"
-                checkSameHonorVacantTime = f"SELECT * FROM CourseSchedules WHERE startTime = '{honorVacantStartTime}' AND endTime = '{honorVacantEndTime}' AND dayOfWeek = '{honorVacantDayOfWeek}'"
-                checkExceedsHourMins = f"""
-                                        SELECT professorId, 
-                                            SUM(DATEDIFF(MINUTE, startTime, endTime) / 60.0) AS totalScheduledHours
-                                        FROM CourseSchedules
-                                        WHERE professorId = {int(current_professor)}
-                                        AND courseId = '{choiceID}'
-                                        AND dayOfWeek = '{honorVacantDayOfWeek}'
-                                        GROUP BY professorId
-                                        HAVING SUM(DATEDIFF(MINUTE, startTime, endTime) / 60.0) >= 1.5;
-                                        """
-
-                if scheduleData:
-                    if (executeQuery(checkSameHonorVacantTime)):
-                        alertType = "INVALID_HONORVACANT_EXISTING_TIMESLOT"
-                    else:
-                        if (executeQuery(checkExceedsHourMins)):
-                            alertType = "INVALID_HONORVACANT_MAXIMUM_HOURS_REACHED"
-                        else:
-                            executeQuery(insertHonorVacantQuery)
-                            professorData = executeQuery(getProfessorsQuery)
-                            courseData = executeQuery(getCoursesQuery)
-                            scheduleData = executeQuery(getCourseSchedulesQuery)
-                            roomData = executeQuery(getRoomsQuery)
-                            current_professor = int(current_professor)
-                            scheduleMode = scheduleMode
-                            alertType = ""
-
-                else:
-                    executeQuery(insertHonorVacantQuery)
-                    professorData = executeQuery(getProfessorsQuery)
-                    courseData = executeQuery(getCoursesQuery)
-                    scheduleData = executeQuery(getCourseSchedulesQuery)
-                    roomData = executeQuery(getRoomsQuery)
-                    current_professor = int(current_professor)
-                    scheduleMode = scheduleMode
-                    alertType = ""
 
             if action == "deleteCourses":
                 selectedCourseIds = request.form.getlist("coursesToBeDeleted")
