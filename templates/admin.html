@@ -220,7 +220,7 @@
           alert("ERROR: Honorarium/Vacant has already reached its maximum hours. Please try agian. ")
         }
         if (alertVariable == "FILE_UPLOAD_SUCCESSFUL") {
-          alert('Course have been imported successfully.')
+          alert('Courses have been imported successfully.')
         }
       };
     </script>
@@ -1055,6 +1055,7 @@
                           <th scope="col">Course Name</th>
                           <th scope="col">Year Level & Department</th>
                           <th scope="col">Units</th>
+                          <th scope="col">Course Type</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1063,6 +1064,7 @@
                           <td>{{ course[0] }}</td>
                           <td>{{ course[1] }}</td>
                           <td>{{ course[2] }}</td>
+                          <td>{{ course[4] }}</td>
                           <td>{{ course[3] }}</td>
                           </form>                        
                           </td>
