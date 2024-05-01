@@ -443,6 +443,7 @@ def admin():
                 roomData = executeQuery(getRoomsQuery)
                 current_professor = int(current_professor)
                 scheduleMode = scheduleMode
+                alertType = "COURSE_DELETE_SUCCESS"
                 
             if action == "deleteUser":
                 professorName = ""
@@ -520,12 +521,14 @@ def admin():
                     
                 file = request.files['file']
                 if file.filename == '':
-                        return "No selected file."
+                        return '<script>alert("No selected File."); window.location.href="/admin";</script>'
+                
                 if file and allowed_file(file.filename):
                     filename = secure_filename(file.filename)
                     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                     executeQuery(pe.readContents(filename))
                     alertType = "FILE_UPLOAD_SUCCESSFUL"
+                    return '<script>window.location.href="/admin";</script>'
 
             if action == "inquiries":
                 return redirect(url_for('inquiries'))

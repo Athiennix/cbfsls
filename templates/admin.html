@@ -217,7 +217,7 @@
           alert("ERROR: Honorarium/Vacant is being scheduled at a timeframe that has an existing schedule. Please try again.")
         }
         if (alertVariable == "INVALID_HONORVACANT_MAXIMUM_HOURS_REACHED") {
-          alert("ERROR: Honorarium/Vacant has already reached its maximum hours. Please try agian. ")
+          alert("ERROR: Honorarium/Vacant has already reached its maximum hours. Please try again. ")
         }
         if (alertVariable == "COURSE_DELETE_SUCCESS") {
           alert('Selected courses have been deleted successfully.')
@@ -235,7 +235,7 @@
           <div class="alert alert-info col-6 mt-3" role="alert">
             {% for prof in professorData if prof[0] == current_professor %}
             <h5 class="text-center mt-3">
-              Load for <b>{{prof[1]}}</b> is available.
+              Now loading for <b>{{prof[1]}}</b>.
             </h5>
             <p class="text-center">See content below for details.</p>
             {% else %}
@@ -363,8 +363,11 @@
                           <option value="09:00:00">9:00 AM</option>
                           <option value="10:30:00">10:30 AM</option>
                           <option value="12:00:00">12:00 PM</option>
-                          <option value="13:30:00">01:30 PM</option>
-                          <option value="15:00:00">03:00 PM</option>
+                          <option value="13:30:00">1:30 PM</option>
+                          <option value="15:00:00">3:00 PM</option>
+                          <option value="16:30:00">4:30 PM</option>
+                          <option value="18:00:00">6:00 PM</option>
+                          <option value="19:30:00">7:30 PM</option>
                         </select>
                         <label for="floatingPassword">Start Time</label>
                       </div>
@@ -510,8 +513,11 @@
                           <option value="09:00:00">9:00 AM</option>
                           <option value="10:30:00">10:30 AM</option>
                           <option value="12:00:00">12:00 PM</option>
-                          <option value="13:30:00">01:30 PM</option>
-                          <option value="15:00:00">03:00 PM</option>
+                          <option value="13:30:00">1:30 PM</option>
+                          <option value="15:00:00">3:00 PM</option>
+                          <option value="16:30:00">4:30 PM</option>
+                          <option value="18:00:00">6:00 PM</option>
+                          <option value="19:30:00">7:30 PM</option>
                         </select>
                         <label for="floatingPassword">Start Time</label>
                       </div>
@@ -1042,40 +1048,257 @@
                           <td>-</td>
                           {% endfor %}
                         </tr>
+
+                        <tr>
+                          <th scope="row">4:30 PM - 6:00 PM</th>
+                          {% for sched in scheduleData if sched[5] == 'Monday' and
+                          sched[6].strftime('%H:%M:%S') == '16:30:00' and
+                          sched[7].strftime('%H:%M:%S') == '18:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                          current_professor %}
+                          <td>Honorarium</td>
+                          {% elif sched[1] == 'VT' ~ current_professor %}
+                          <td>Vacant Time</td>
+                          {% else %}
+                          <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                          {% endif %} {% else %}
+                          <td>-</td>
+                          {% endfor %} {% for sched in scheduleData if sched[5] ==
+                          'Tuesday' and sched[6].strftime('%H:%M:%S') == '16:30:00' and
+                          sched[7].strftime('%H:%M:%S') == '18:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                          current_professor %}
+                          <td>Honorarium</td>
+                          {% elif sched[1] == 'VT' ~ current_professor %}
+                          <td>Vacant Time</td>
+                          {% else %}
+                          <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                          {% endif %} {% else %}
+                          <td>-</td>
+                          {% endfor %} {% for sched in scheduleData if sched[5] ==
+                          'Wednesday' and sched[6].strftime('%H:%M:%S') == '16:30:00' and
+                          sched[7].strftime('%H:%M:%S') == '18:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                          current_professor %}
+                          <td>Honorarium</td>
+                          {% elif sched[1] == 'VT' ~ current_professor %}
+                          <td>Vacant Time</td>
+                          {% else %}
+                          <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                          {% endif %} {% else %}
+                          <td>-</td>
+                          {% endfor %} {% for sched in scheduleData if sched[5] ==
+                          'Thursday' and sched[6].strftime('%H:%M:%S') == '16:30:00' and
+                          sched[7].strftime('%H:%M:%S') == '18:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                          current_professor %}
+                          <td>Honorarium</td>
+                          {% elif sched[1] == 'VT' ~ current_professor %}
+                          <td>Vacant Time</td>
+                          {% else %}
+                          <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                          {% endif %} {% else %}
+                          <td>-</td>
+                          {% endfor %} {% for sched in scheduleData if sched[5] ==
+                          'Friday' and sched[6].strftime('%H:%M:%S') == '16:30:00' and
+                          sched[7].strftime('%H:%M:%S') == '18:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                          current_professor %}
+                          <td>Honorarium</td>
+                          {% elif sched[1] == 'VT' ~ current_professor %}
+                          <td>Vacant Time</td>
+                          {% else %}
+                          <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                          {% endif %} {% else %}
+                          <td>-</td>
+                          {% endfor %} {% for sched in scheduleData if sched[5] ==
+                          'Saturday' and sched[6].strftime('%H:%M:%S') == '16:30:00' and
+                          sched[7].strftime('%H:%M:%S') == '18:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                          current_professor %}
+                          <td>Honorarium</td>
+                          {% elif sched[1] == 'VT' ~ current_professor %}
+                          <td>Vacant Time</td>
+                          {% else %}
+                          <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                          {% endif %} {% else %}
+                          <td>-</td>
+                          {% endfor %}
+                      </tr>
+
+                      <tr>
+                        <th scope="row">6:00 PM - 7:30 PM</th>
+                        {% for sched in scheduleData if sched[5] == 'Monday' and
+                        sched[6].strftime('%H:%M:%S') == '18:00:00' and
+                        sched[7].strftime('%H:%M:%S') == '19:30:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                        current_professor %}
+                        <td>Honorarium</td>
+                        {% elif sched[1] == 'VT' ~ current_professor %}
+                        <td>Vacant Time</td>
+                        {% else %}
+                        <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                        {% endif %} {% else %}
+                        <td>-</td>
+                        {% endfor %} {% for sched in scheduleData if sched[5] ==
+                        'Tuesday' and sched[6].strftime('%H:%M:%S') == '18:00:00' and
+                        sched[7].strftime('%H:%M:%S') == '19:30:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                        current_professor %}
+                        <td>Honorarium</td>
+                        {% elif sched[1] == 'VT' ~ current_professor %}
+                        <td>Vacant Time</td>
+                        {% else %}
+                        <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                        {% endif %} {% else %}
+                        <td>-</td>
+                        {% endfor %} {% for sched in scheduleData if sched[5] ==
+                        'Wednesday' and sched[6].strftime('%H:%M:%S') == '18:00:00' and
+                        sched[7].strftime('%H:%M:%S') == '19:30:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                        current_professor %}
+                        <td>Honorarium</td>
+                        {% elif sched[1] == 'VT' ~ current_professor %}
+                        <td>Vacant Time</td>
+                        {% else %}
+                        <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                        {% endif %} {% else %}
+                        <td>-</td>
+                        {% endfor %} {% for sched in scheduleData if sched[5] ==
+                        'Thursday' and sched[6].strftime('%H:%M:%S') == '18:00:00' and
+                        sched[7].strftime('%H:%M:%S') == '19:30:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                        current_professor %}
+                        <td>Honorarium</td>
+                        {% elif sched[1] == 'VT' ~ current_professor %}
+                        <td>Vacant Time</td>
+                        {% else %}
+                        <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                        {% endif %} {% else %}
+                        <td>-</td>
+                        {% endfor %} {% for sched in scheduleData if sched[5] ==
+                        'Friday' and sched[6].strftime('%H:%M:%S') == '18:00:00' and
+                        sched[7].strftime('%H:%M:%S') == '19:30:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                        current_professor %}
+                        <td>Honorarium</td>
+                        {% elif sched[1] == 'VT' ~ current_professor %}
+                        <td>Vacant Time</td>
+                        {% else %}
+                        <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                        {% endif %} {% else %}
+                        <td>-</td>
+                        {% endfor %} {% for sched in scheduleData if sched[5] ==
+                        'Saturday' and sched[6].strftime('%H:%M:%S') == '18:00:00' and
+                        sched[7].strftime('%H:%M:%S') == '19:30:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                        current_professor %}
+                        <td>Honorarium</td>
+                        {% elif sched[1] == 'VT' ~ current_professor %}
+                        <td>Vacant Time</td>
+                        {% else %}
+                        <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                        {% endif %} {% else %}
+                        <td>-</td>
+                        {% endfor %}
+                    </tr>
+
+                    <tr>
+                      <th scope="row">7:30 PM - 9:00 PM</th>
+                      {% for sched in scheduleData if sched[5] == 'Monday' and
+                      sched[6].strftime('%H:%M:%S') == '19:30:00' and
+                      sched[7].strftime('%H:%M:%S') == '20:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                      current_professor %}
+                      <td>Honorarium</td>
+                      {% elif sched[1] == 'VT' ~ current_professor %}
+                      <td>Vacant Time</td>
+                      {% else %}
+                      <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                      {% endif %} {% else %}
+                      <td>-</td>
+                      {% endfor %} {% for sched in scheduleData if sched[5] ==
+                      'Tuesday' and sched[6].strftime('%H:%M:%S') == '19:30:00' and
+                      sched[7].strftime('%H:%M:%S') == '20:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                      current_professor %}
+                      <td>Honorarium</td>
+                      {% elif sched[1] == 'VT' ~ current_professor %}
+                      <td>Vacant Time</td>
+                      {% else %}
+                      <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                      {% endif %} {% else %}
+                      <td>-</td>
+                      {% endfor %} {% for sched in scheduleData if sched[5] ==
+                      'Wednesday' and sched[6].strftime('%H:%M:%S') == '19:30:00' and
+                      sched[7].strftime('%H:%M:%S') == '20:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                      current_professor %}
+                      <td>Honorarium</td>
+                      {% elif sched[1] == 'VT' ~ current_professor %}
+                      <td>Vacant Time</td>
+                      {% else %}
+                      <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                      {% endif %} {% else %}
+                      <td>-</td>
+                      {% endfor %} {% for sched in scheduleData if sched[5] ==
+                      'Thursday' and sched[6].strftime('%H:%M:%S') == '19:30:00' and
+                      sched[7].strftime('%H:%M:%S') == '20:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                      current_professor %}
+                      <td>Honorarium</td>
+                      {% elif sched[1] == 'VT' ~ current_professor %}
+                      <td>Vacant Time</td>
+                      {% else %}
+                      <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                      {% endif %} {% else %}
+                      <td>-</td>
+                      {% endfor %} {% for sched in scheduleData if sched[5] ==
+                      'Friday' and sched[6].strftime('%H:%M:%S') == '19:30:00' and
+                      sched[7].strftime('%H:%M:%S') == '20:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                      current_professor %}
+                      <td>Honorarium</td>
+                      {% elif sched[1] == 'VT' ~ current_professor %}
+                      <td>Vacant Time</td>
+                      {% else %}
+                      <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                      {% endif %} {% else %}
+                      <td>-</td>
+                      {% endfor %} {% for sched in scheduleData if sched[5] ==
+                      'Saturday' and sched[6].strftime('%H:%M:%S') == '19:30:00' and
+                      sched[7].strftime('%H:%M:%S') == '20:00:00' and sched[2] == current_professor %} {% if sched[1] == 'HT' ~
+                      current_professor %}
+                      <td>Honorarium</td>
+                      {% elif sched[1] == 'VT' ~ current_professor %}
+                      <td>Vacant Time</td>
+                      {% else %}
+                      <td>{{sched[1]}}<br/>{{sched[3]}}<br/>{{sched[4]}}</td>
+                      {% endif %} {% else %}
+                      <td>-</td>
+                      {% endfor %}
+                  </tr>
+
                       </tbody>
                     </table>
                   </div>
+
                   {% else %}
                   <div class="alert alert-info border-3 text-center">
-                    <h3>CBFS COURSE OFFERINGS</h3>
-                    <table class="table">
-                      <thead>
-                        <tr>
-                          <th scope="col">Course Code</th>
-                          <th scope="col">Course Name</th>
-                          <th scope="col">Year Level & Department</th>
-                          <th scope="col">Units</th>
-                          <th scope="col">Course Type</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for course in course_offerings %}
-                        <tr>
-                          <td>{{ course[0] }}</td>
-                          <td>{{ course[1] }}</td>
-                          <td>{{ course[2] }}</td>
-                          <td>{{ course[4] }}</td>
-                          <td>{{ course[3] }}</td>
-                          </form>                        
-                          </td>
-                          </td>
-                        </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
+                      <h3>CBFS COURSE OFFERINGS</h3>
+                      <div style="max-height: 400px; overflow-y: scroll;">
+                          <table class="table">
+                              <thead>
+                                  <tr>
+                                      <th scope="col">Course Code</th>
+                                      <th scope="col">Course Name</th>
+                                      <th scope="col">Year Level & Department</th>
+                                      <th scope="col">Units</th>
+                                      <th scope="col">Course Type</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  {% for course in course_offerings %}
+                                  <tr>
+                                      <td>{{ course[0] }}</td>
+                                      <td>{{ course[1] }}</td>
+                                      <td>{{ course[2] }}</td>
+                                      <td>{{ course[4] }}</td>
+                                      <td>{{ course[3] }}</td>
+                                      </form>
+                                      </td>
+                                      </td>
+                                  </tr>
+                                  {% endfor %}
+                              </tbody>
+                          </table>
+                      </div>
                   </div>
                   {% endfor %}
-
+                  
                   <!-- ADMINISTRATIVE OPTIONS -->
                   <div
                     class="justify-content-center bg-light container py-3 px-4"
