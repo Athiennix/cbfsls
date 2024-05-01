@@ -428,7 +428,7 @@ def admin():
                     else:
                         # If no records exist, insert new schedule into the table
                         executeQuery(insertScheduleQuery)
-                        # Update necessary data for UI refresh
+                        # Refresh data for UI
                         professorData = executeQuery(getProfessorsQuery)
                         courseData = executeQuery(getCoursesQuery)
                         scheduleData = executeQuery(getCourseSchedulesQuery)
