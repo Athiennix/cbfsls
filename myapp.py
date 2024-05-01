@@ -112,6 +112,8 @@ def index():
                 inquiryMessage = request.form['message']
                 insertInquiryQuery = f"INSERT INTO ProfessorInquiries (professorId, inqSubject, inqMessage, inqStatus) VALUES ({currentId}, '{inquirySubject}', '{inquiryMessage}', 'Unresolved')"
                 executeQuery(insertInquiryQuery)
+
+                flash('Your inquiry was submitted successfully.', 'success')
                 
                 # Update professorName in ProfessorInquiries based on the latest data from Professors
                 updateProfessorNameQuery = f"""

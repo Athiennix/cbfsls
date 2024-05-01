@@ -106,6 +106,17 @@
   </head>
 
   <body>
+    <!-- Inquiry message when submitted successfully -->
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="alert alert-success text-center" role="alert" style="font-weight: bold; font-size: 20px;">
+        {% for message in messages %}
+        {{ message }}
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
     <form method="POST">
       <div class="container-md" id="mainContainer">
         <div class="bg-primary-subtle p-md-4 p-sm-3 p-3 pb-3 rounded-3 mt-md-5 mx-md-5 mt-3" id="scheduleContainer">
@@ -1678,54 +1689,54 @@
       </div>
 
       <div class="modal fade" id="contactModal" tabindex="-1" arial-labelledby="staticBackdropLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h1 class="modal-title fs-5" id="staticBackdropLabel">Contact the Administrator</h1>
-              <small>Please fill in the details below.</small>
-            </div>
-            <div class="modal-body">
-              <div class="row">
-                <div class="col">
-                  <div class="form-floating mb-3">
-                    <select
-                      class="form-select"
-                      name="messageSubject"
-                      required
-                    >
-                      <option selected>- Select -</option>
-                      <option value="Change of Schedule">Change of Schedule</option>
-                      <option value="Other Inquiries">Other Inquiries</option>
-                    </select>
-                    <label for="floatingPassword">Message Subject</label>
+          <div class="modal-dialog modal-dialog-centered modal-lg">
+              <div class="modal-content">
+                  <div class="modal-header">
+                      <h1 class="modal-title fs-5" id="staticBackdropLabel">Contact the Administrator</h1>
+                      <small>Please fill in the details below.</small>
                   </div>
-                  <div class="form-floating">
-                    <textarea class="form-control" name="message" required placeholder="Leave a comment here" id="floatingTextarea2" maxlength="255" style="height: 100px"></textarea>
-                    <label for="floatingTextarea2">Message</label>
+                  <div class="modal-body">
+                      <div class="row">
+                          <div class="col">
+                              <div class="form-floating mb-3">
+                                  <select
+                                          class="form-select"
+                                          name="messageSubject"
+                                          required
+                                  >
+                                      <option selected>- Select -</option>
+                                      <option value="Change of Schedule">Change of Schedule</option>
+                                      <option value="Other Inquiries">Other Inquiries</option>
+                                  </select>
+                                  <label for="floatingPassword">Message Subject</label>
+                              </div>
+                              <div class="form-floating">
+                                  <textarea class="form-control" name="message" required placeholder="Leave a comment here" id="floatingTextarea2" maxlength="255" style="height: 100px"></textarea>
+                                  <label for="floatingTextarea2">Message</label>
+                              </div>
+                          </div>
+                      </div>
                   </div>
-                </div>
+                  <div class="modal-footer">
+                      <button
+                              type="button"
+                              class="btn btn-secondary"
+                              data-bs-toggle="modal"
+                              data-bs-target="#chooseAddMode"
+                      >
+                          Close
+                      </button>
+                      <button
+                              type="submit"
+                              name="btn"
+                              value="submitInquiry"
+                              class="btn btn-primary"
+                      >
+                          Submit
+                      </button>
+                  </div>
               </div>
-            </div>
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-toggle="modal"
-                data-bs-target="#chooseAddMode"
-              >
-                Close
-              </button>
-              <button
-                type="submit"
-                name="btn"
-                value="submitInquiry"
-                class="btn btn-primary"
-              >
-                Submit
-              </button>
-            </div>
           </div>
-        </div>
       </div>
     </form>
   </body>
