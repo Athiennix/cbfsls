@@ -211,7 +211,7 @@
           alert("ERROR: This course is being scheduled at a timeframe that has an existing schedule. Please try again.");
         }
         if (alertVariable == "INVALID_MAXIMUM_HOURS_REACHED") {
-          alert("ERROR: This course has already reached its maximum hours. Please try again.")
+          alert("ERROR: This course has already reached its maximum hours for this section. Please try again.")
         }
         if (alertVariable == "INVALID_HONORVACANT_EXISTING_TIMESLOT") {
           alert("ERROR: Honorarium/Vacant is being scheduled at a timeframe that has an existing schedule. Please try again.")
@@ -219,8 +219,8 @@
         if (alertVariable == "INVALID_HONORVACANT_MAXIMUM_HOURS_REACHED") {
           alert("ERROR: Honorarium/Vacant has already reached its maximum hours. Please try agian. ")
         }
-        if (alertVariable == "FILE_UPLOAD_SUCCESSFUL") {
-          alert('Courses have been imported successfully.')
+        if (alertVariable == "COURSE_DELETE_SUCCESS") {
+          alert('Selected courses have been deleted successfully.')
         }
       };
     </script>

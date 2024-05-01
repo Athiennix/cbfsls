@@ -101,7 +101,7 @@ def index():
         scheduleData = executeQuery(getCourseSchedulesQuery)
 
         if request.method == 'POST':
-            course_duration = request.form.get('course-duration')
+            # course_duration = request.form.get('course-duration')
             # Do something with the selected course duration
             # print("Selected course duration:", course_duration)
             action = request.form['btn']
@@ -569,28 +569,16 @@ def admin():
 
             if action == "uploadExcel":
                 if 'file' not in request.files:
-                    return '<script>alert("File not found.");</script>'
-                
+                        return '<script>alert("File not found.");</script>'
+                    
                 file = request.files['file']
                 if file.filename == '':
-                    return "No selected file."
+                        return "No selected file."
                 if file and allowed_file(file.filename):
                     filename = secure_filename(file.filename)
                     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    executeQuery(pe.readContents(filename))  # Assuming pe.readContents() is your function to process Excel data
-                    
-                    # Add your checkExceedsHours query here
-                    checkExceedsHours = f"""
-                        SELECT cs.professorId, 
-                            SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) AS totalScheduledHours
-                        FROM CourseSchedules cs
-                        JOIN Courses c ON cs.courseId = c.courseId
-                        WHERE cs.professorId = {current_professor}
-                        AND cs.courseId = '{current_course}'
-                        AND c.courseType = '{currentType}'
-                        GROUP BY cs.professorId
-                        HAVING SUM(DATEDIFF(MINUTE, cs.startTime, cs.endTime) / 60.0) >= {maxHours};
-                    """
+                    executeQuery(pe.readContents(filename))
+                    alertType = "FILE_UPLOAD_SUCCESSFUL"
 
             if action == "inquiries":
                 return redirect(url_for('inquiries'))
