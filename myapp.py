@@ -101,9 +101,6 @@ def index():
         scheduleData = executeQuery(getCourseSchedulesQuery)
 
         if request.method == 'POST':
-            # course_duration = request.form.get('course-duration')
-            # Do something with the selected course duration
-            # print("Selected course duration:", course_duration)
             action = request.form['btn']
 
             if action == 'logout':
@@ -115,14 +112,26 @@ def index():
                 inquiryMessage = request.form['message']
                 insertInquiryQuery = f"INSERT INTO ProfessorInquiries (professorId, inqSubject, inqMessage, inqStatus) VALUES ({currentId}, '{inquirySubject}', '{inquiryMessage}', 'Unresolved')"
                 executeQuery(insertInquiryQuery)
-                return user_alert.success_submit_inquiry()
+                
+                # Update professorName in ProfessorInquiries based on the latest data from Professors
+                updateProfessorNameQuery = f"""
+                UPDATE ProfessorInquiries
+                SET professorName = (
+                    SELECT employeeName
+                    FROM Professors
+                    WHERE Professors.employeeId = ProfessorInquiries.professorId
+                )
+                """
+                executeQuery(updateProfessorNameQuery)
+
+                # Redirect to index after submitting the inquiry
+                return redirect(url_for('index'))
             
         return render_template("index.html",
         current_professor=currentId,
         professorData=professorData,
         courseData=courseData,
         scheduleData=scheduleData)
-
 
 # CODE BLOCK: Admin Page
 @app.route('/admin', methods=['GET', 'POST'])

@@ -24,7 +24,7 @@
     <div class="row pb-4">
       <div class="col-3"></div>
       <div class="alert alert-info col-6 mt-3" role="alert">
-        <h5 class="text-center mt-3"><b>User Requests</b> are available.</h5>
+        <h5 class="text-center mt-3">Now looking at <b>Faculty Concerns.</b></h5>
         <p class="text-center">See content below for details.</p>
       </div>
     </div>
@@ -33,7 +33,8 @@
       <table class="table text-center  table-hover">
         <thead>
           <tr>
-            <th scope="col">User ID</th>
+            <th scope="col">Professor Name</th>
+            <th scope="col">Professor ID</th>
             <th scope="col">Subject</th>
             <th scope="col">Message</th>
           </tr>
@@ -41,6 +42,7 @@
         <tbody>
           {% for data in inquiryData if data[4] == 'Unresolved' %}
           <tr>
+            <td>{{data[5]}}</td>
             <td>{{data[1]}}</td>
             <td>{{data[2]}}</td>
             <td>
