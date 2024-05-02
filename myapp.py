@@ -436,9 +436,6 @@ def admin():
                         current_professor = int(current_professor)
                         scheduleMode = scheduleMode
                         alertType = ""
-                    else:
-                        # Overlapping schedules exist
-                        alertType = "INVALID_TIMESLOT_OVERLAP"
 
             if action == 'insertHonorariumVacant':
                 scheduleMode = 2
