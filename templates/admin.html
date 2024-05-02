@@ -215,6 +215,9 @@
         if (alertVariable == "COURSE_ALREADY_ASSIGNED") {
           alert("ERROR: This course is already assigned to the same section or professor. Choose a different section or professor and try again.")
         }
+        if (alertVariable == "INVALID_PROFESSOR") {
+          alert("ERROR: This professor is already assigned in this course. Choose a different professor and try again.")
+        }
         if (alertVariable == "INVALID_TIMESLOT") { 
           alert("ERROR: This course is being scheduled at a timeframe with an existing schedule. Choose a different timeframe and try again.");
         }
@@ -335,9 +338,7 @@
                           required
                         >
                           <option default></option>
-                          {% for prof_courses in courseData if prof_courses[0]
-                          != 'HT' ~ current_professor and prof_courses[0] !=
-                          'VT' ~ current_professor %}
+                          {% for prof_courses in courseData if prof_courses[1] != 'Honorarium Time' and prof_courses[1] != 'Vacant Time' %}
                           <option value="{{prof_courses[0]}}">
                             {{ prof_courses[0] }}
                           </option>
@@ -1287,7 +1288,7 @@
                                   </tr>
                               </thead>
                               <tbody>
-                                  {% for course in course_offerings %}
+                                  {% for course in course_offerings if course[1] != 'Honorarium Time' and course[1] != 'Vacant Time' %}
                                   <tr>
                                       <td>{{ course[0] }}</td>
                                       <td>{{ course[1] }}</td>

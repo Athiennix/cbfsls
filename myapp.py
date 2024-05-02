@@ -461,6 +461,61 @@ def admin():
                         # Overlapping schedules exist
                         alertType = "INVALID_TIMESLOT_OVERLAP"
 
+            if action == 'insertHonorariumVacant':
+                scheduleMode = 2
+                current_professor = request.form['hiddenProfessorDetails']
+                otherScheduleType = request.form['honorVacantChoice']
+                honorVacantDayOfWeek = request.form['honorVacantDayOfWeek']
+                honorVacantStartTime = request.form['honorVacantStartTime']
+                honorVacantEndTime = request.form['honorVacantEndingTime']
+                
+                getHonorariumID = f"SELECT courseId FROM Courses where courseId = '{'HT' + current_professor}'"
+                getVacantID = f"SELECT courseId FROM Courses where courseId = '{'VT' + current_professor}'"
+                honorIDquery = executeQuery(getHonorariumID)
+                vacantIDquery = executeQuery(getVacantID)
+
+                if otherScheduleType == 'Honorarium Time':
+                    choiceID = honorIDquery[0][0]
+                
+                if otherScheduleType == 'Vacant Time':
+                    choiceID = vacantIDquery[0][0]
+
+                insertHonorVacantQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES ('{choiceID}', {current_professor}, '', '', '{honorVacantDayOfWeek}', '{honorVacantStartTime}', '{honorVacantEndTime}')"
+                checkSameHonorVacantTime = f"SELECT * FROM CourseSchedules WHERE startTime = '{honorVacantStartTime}' AND endTime = '{honorVacantEndTime}' AND dayOfWeek = '{honorVacantDayOfWeek}'"
+                checkExceedsHourMins = f"""
+                                        SELECT professorId, 
+                                            SUM(DATEDIFF(MINUTE, startTime, endTime) / 60.0) AS totalScheduledHours
+                                        FROM CourseSchedules
+                                        WHERE professorId = {int(current_professor)}
+                                        AND courseId = '{choiceID}'
+                                        AND dayOfWeek = '{honorVacantDayOfWeek}'
+                                        GROUP BY professorId
+                                        HAVING SUM(DATEDIFF(MINUTE, startTime, endTime) / 60.0) >= 1.5;
+                                        """
+
+                if scheduleData:
+                    if (executeQuery(checkSameHonorVacantTime)):
+                        return admin_alert.invalid_existing_honorVacant_timeslot(otherScheduleType)
+                    else:
+                        if (executeQuery(checkExceedsHourMins)):
+                            return admin_alert.invalid_maximum_honorVacant_timeslot(otherScheduleType)
+                        else:
+                            executeQuery(insertHonorVacantQuery)
+                            professorData = executeQuery(getProfessorsQuery)
+                            courseData = executeQuery(getCoursesQuery)
+                            scheduleData = executeQuery(getCourseSchedulesQuery)
+                            roomData = executeQuery(getRoomsQuery)
+                            current_professor=int(current_professor)
+                            scheduleMode=scheduleMode
+                else:
+                    executeQuery(insertHonorVacantQuery)
+                    professorData = executeQuery(getProfessorsQuery)
+                    courseData = executeQuery(getCoursesQuery)
+                    scheduleData = executeQuery(getCourseSchedulesQuery)
+                    roomData = executeQuery(getRoomsQuery)
+                    current_professor=int(current_professor)
+                    scheduleMode=scheduleMode
+                    
             if action == "deleteCourses":
                 selectedCourseIds = request.form.getlist("coursesToBeDeleted")
                 for courseId in selectedCourseIds:
