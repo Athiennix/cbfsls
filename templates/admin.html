@@ -216,13 +216,13 @@
           alert("ERROR: This course is already assigned to the same section or professor. Choose a different section or professor and try again.")
         }
         if (alertVariable == "INVALID_TIMESLOT") { 
-          alert("ERROR: This course is being scheduled at a timeframe that has an existing schedule. Choose a different timeframe and try again.");
+          alert("ERROR: This course is being scheduled at a timeframe with an existing schedule. Choose a different timeframe and try again.");
         }
         if (alertVariable == "INVALID_MAXIMUM_HOURS_REACHED") {
           alert("ERROR: This course has already reached its maximum hours for this section. Choose a different course or section and try again.")
         }
         if (alertVariable == "INVALID_HONORVACANT_EXISTING_TIMESLOT") {
-          alert("ERROR: Honorarium/Vacant is being scheduled at a timeframe that has an existing schedule. Choose a different timeframe and try again.")
+          alert("ERROR: Honorarium/Vacant is being scheduled at a timeframe with an existing schedule. Choose a different timeframe and try again.")
         }
         if (alertVariable == "INVALID_HONORVACANT_MAXIMUM_HOURS_REACHED") {
           alert("ERROR: Honorarium/Vacant has already reached its maximum hours for this professor.")
@@ -1284,7 +1284,6 @@
                                       <th scope="col">Course Name</th>
                                       <th scope="col">Year Level & Department</th>
                                       <th scope="col">Units</th>
-                                      <th scope="col">Course Type</th>
                                   </tr>
                               </thead>
                               <tbody>
@@ -1294,7 +1293,6 @@
                                       <td>{{ course[1] }}</td>
                                       <td>{{ course[2] }}</td>
                                       <td>{{ course[4] }}</td>
-                                      <td>{{ course[3] }}</td>
                                       </form>
                                       </td>
                                       </td>

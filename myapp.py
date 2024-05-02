@@ -211,7 +211,7 @@ def admin():
                 scheduleMode = 1
                 currentType = ""
                 maxHours = 0
-                genEdImplicitDays = ['Monday', 'Tuesday', 'Thursday', 'Friday']
+                genEdImplicitDays = ['Monday', 'Tuesday', 'Wednesday' 'Thursday', 'Friday', 'Saturday']
                 current_course = request.form['currentCourse'].upper()
                 current_professor = request.form['hiddenProfessorDetails']
                 newCourseSection = request.form['courseSection'].upper()
@@ -248,7 +248,7 @@ def admin():
                         # Proceed with re-assignment
                         insertScheduleQuery = f"INSERT INTO CourseSchedules (courseId, professorId, room, section, dayOfWeek, startTime, endTime) VALUES "
                         updateCourseQuery = f"UPDATE Courses SET professorId = {current_professor} WHERE courseId = '{current_course}'"
-                        # ORIGINAL checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE startTime >= '{newStartTime}' AND endTime <= '{newEndTime}' AND dayOfWeek = '{newDayOfWeek}'"
+                        # ORIGINAL NOT WORKING checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE startTime >= '{newStartTime}' AND endTime <= '{newEndTime}' AND dayOfWeek = '{newDayOfWeek}'"
                         checkIfSameTime = f"SELECT * FROM CourseSchedules WHERE dayOfWeek = '{newDayOfWeek}' AND ((startTime <= '{newStartTime}' AND endTime >= '{newStartTime}') OR (startTime <= '{newEndTime}' AND endTime >= '{newEndTime}') OR (startTime >= '{newStartTime}' AND endTime <= '{newEndTime}')) OR ((startTime < '{newEndTime}' AND endTime > '{newStartTime}'))"
                         checkCourseType = f"SELECT courseType FROM Courses WHERE courseId = '{current_course}'"
                         checkIfSameRoom = f"SELECT * FROM CourseSchedules WHERE startTime = '{newStartTime}' and endTime = '{newEndTime}' and dayOfWeek = '{newDayOfWeek}' and room = '{newRoom}'"
@@ -280,7 +280,16 @@ def admin():
 
                     elif courseDuration == 3:
                         # Check if there are overlapping schedules
-                        checkOverlapQuery = f"SELECT * FROM CourseSchedules WHERE dayOfWeek = '{newDayOfWeek}' AND ((startTime <= '{newStartTime}' AND endTime >= '{newStartTime}') OR (startTime <= '{newEndTime}' AND endTime >= '{newEndTime}') OR (startTime >= '{newStartTime}' AND endTime <= '{newEndTime}') OR (startTime < '{newEndTime}' AND endTime > '{newStartTime}'))"
+                        checkOverlapQuery = f"""
+                            SELECT * FROM CourseSchedules 
+                            WHERE dayOfWeek = '{newDayOfWeek}' 
+                            AND (
+                                (startTime <= '{newStartTime}' AND endTime >= '{newStartTime}') OR 
+                                (startTime <= '{newEndTime}' AND endTime >= '{newEndTime}') OR 
+                                (startTime >= '{newStartTime}' AND endTime <= '{newEndTime}') OR 
+                                (startTime < '{newEndTime}' AND endTime > '{newStartTime}')
+                            )
+                        """
                         overlappingSchedules = executeQuery(checkOverlapQuery)
                         if not overlappingSchedules:
                             if newDayOfWeek == "Monday":
@@ -407,31 +416,43 @@ def admin():
                                     alertType = ""
                                 else:
                                     alertType = "COURSE_ALREADY_ASSIGNED"
-                    # If there is no professor assigned to the course
-                    elif ifNoProfessorExists:
+                    else:
+                        # No professor assigned to the course
                         if sameRoom and executeQuery(checkIfSameTime):
                             alertType = "INVALID_SECTION_ROOM"
                         else:
-                            # No professor assigned to the course
-                            executeQuery(updateCourseQuery)
-                            executeQuery(insertScheduleQuery)
-                            # Refresh data for UI
-                            professorData = executeQuery(getProfessorsQuery)
-                            courseData = executeQuery(getCoursesQuery)
-                            scheduleData = executeQuery(getCourseSchedulesQuery)
-                            roomData = executeQuery(getRoomsQuery)
-                            current_professor = int(current_professor)
-                            scheduleMode = scheduleMode
-                            alertType = ""
+                            # Check if the total scheduled hours exceed the maximum allowed for the specific section
+                            exceedsMaxHours = executeQuery(checkExceedsHours)
+                            if exceedsMaxHours:
+                                alertType = "INVALID_MAXIMUM_HOURS_REACHED"
+                            else:
+                                # No issues found, proceed with inserting the schedule
+                                # Check for overlapping schedules
+                                checkOverlapQuery = f"SELECT * FROM CourseSchedules WHERE dayOfWeek = '{newDayOfWeek}' AND ((startTime <= '{newStartTime}' AND endTime >= '{newStartTime}') OR (startTime <= '{newEndTime}' AND endTime >= '{newEndTime}') OR (startTime >= '{newStartTime}' AND endTime <= '{newEndTime}') OR (startTime < '{newEndTime}' AND endTime > '{newStartTime}'))"
+                                overlappingSchedules = executeQuery(checkOverlapQuery)
+                                if not overlappingSchedules:
+                                    # No overlapping schedules, proceed with insertion
+                                    executeQuery(insertScheduleQuery)
+                                    # Update necessary data for UI refresh
+                                    professorData = executeQuery(getProfessorsQuery)
+                                    courseData = executeQuery(getCoursesQuery)
+                                    scheduleData = executeQuery(getCourseSchedulesQuery)
+                                    roomData = executeQuery(getRoomsQuery)
+                                    current_professor = int(current_professor)
+                                    scheduleMode = scheduleMode
+                                    alertType = ""
+                                else:
+                                    # Overlapping schedules exist
+                                    alertType = "INVALID_TIMESLOT_OVERLAP"
                 else:
-                    # No existing schedules, proceed with adding new schedule
-                    if sameRoom and executeQuery(checkIfSameTime):
-                        alertType = "INVALID_SECTION_ROOM"
-                    else:
-                        # No existing schedules, proceed with adding new schedule
-                        executeQuery(updateCourseQuery)
+                    # If no records exist, insert new schedule into the table
+                    # Check for overlapping schedules
+                    checkOverlapQuery = f"SELECT * FROM CourseSchedules WHERE dayOfWeek = '{newDayOfWeek}' AND ((startTime <= '{newStartTime}' AND endTime >= '{newStartTime}') OR (startTime <= '{newEndTime}' AND endTime >= '{newEndTime}') OR (startTime >= '{newStartTime}' AND endTime <= '{newEndTime}') OR (startTime < '{newEndTime}' AND endTime > '{newStartTime}'))"
+                    overlappingSchedules = executeQuery(checkOverlapQuery)
+                    if not overlappingSchedules:
+                        # No overlapping schedules, proceed with insertion
                         executeQuery(insertScheduleQuery)
-                        # Refresh data for UI
+                        # Update necessary data for UI refresh
                         professorData = executeQuery(getProfessorsQuery)
                         courseData = executeQuery(getCoursesQuery)
                         scheduleData = executeQuery(getCourseSchedulesQuery)
@@ -439,6 +460,10 @@ def admin():
                         current_professor = int(current_professor)
                         scheduleMode = scheduleMode
                         alertType = ""
+                    else:
+                        # Overlapping schedules exist
+                        alertType = "INVALID_TIMESLOT_OVERLAP"
+
 
 
             if action == "deleteCourses":
