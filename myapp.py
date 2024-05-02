@@ -24,8 +24,8 @@ app.config["UPLOAD_FOLDER"] = "static/files/"
 ALLOWED_EXTENSIONS = {'xlsx'}
 Session(app)
 
-server = 'umakscheduler.database.windows.net'
-database = 'SchedulerDB'
+server = 'cbfssysload.database.windows.net' #'umakscheduler.database.windows.net'
+database = 'cbfsloadsys' #'SchedulerDB'
 connString = 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:cbfssysload.database.windows.net,1433;Database=cbfsloadsys;Uid=cbfsloadsys;Pwd=IAMJENZERKANE-:6ba1224;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;'
 
 @app.route('/')
