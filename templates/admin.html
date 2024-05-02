@@ -170,11 +170,22 @@
         var roomChoice = document.getElementById("roomChoice");
         var roomDiv = document.getElementById("roomDiv");
         var valueRoom = roomChoice.value;
+        
+        // Toggle display of roomDiv
         if (valueRoom == "F2F") {
           roomDiv.style.display = "block";
-        }
-        else {
+          // Additional code for input validation
+          var roomNumberInput = document.querySelector('input[name="courseRoom"]');
+          roomNumberInput.required = true;
+          roomNumberInput.pattern = "\\d*";
+          roomNumberInput.title = "Please enter only numbers";
+        } else {
           roomDiv.style.display = "none";
+          // Reset input validation for other options
+          var roomNumberInput = document.querySelector('input[name="courseRoom"]');
+          roomNumberInput.required = false;
+          roomNumberInput.pattern = "";
+          roomNumberInput.title = "";
         }
       }
 
@@ -326,11 +337,14 @@
                           id="floatingInput"
                           name="courseSection"
                           placeholder="OACC1"
+                          oninput="this.value = this.value.toUpperCase().replace(/[^A-Z-]/g, '')"
                           required
                         />
                         <label for="floatingInput">Course Section</label>
                       </div>
                     </div>
+
+
 
                     <div class="col-6">
                       <div class="form-floating mb-3">
