@@ -24,22 +24,6 @@ app.config["UPLOAD_FOLDER"] = "static/files/"
 ALLOWED_EXTENSIONS = {'xlsx'}
 Session(app)
 
-DRIVER_NAME = '{driver_name}'
-SERVER_NAME = '{server_name}'
-DATABASE_NAME = '{database_name (CBFSLS)}'
-
-# uid = 'admin'
-# password = 'admin'
-
-conn_string = f"""
-    DRIVER={{{DRIVER_NAME}}};
-    SERVER={{{SERVER_NAME}}};
-    DATABASE={{{DATABASE_NAME}}};
-    Trust_Connection=yes;
-"""
-
-conn = odbc.connect(conn_string)
-
 server = 'cbfssysload.database.windows.net' #'umakscheduler.database.windows.net'
 database = 'cbfsloadsys' #'SchedulerDB'
 connString = 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:cbfssysload.database.windows.net,1433;Database=cbfsloadsys;Uid=cbfsloadsys;Pwd=IAMJENZERKANE-:6ba1224;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;'
